@@ -139,6 +139,6 @@ jobs:
           file: ./web/${{ matrix.project }}/Dockerfile
           push: true
           platforms: linux/amd64, linux/arm64
-          tags: crpi-om4xfxfotlzu97hi.cn-shenzhen.personal.cr.aliyuncs.com/citrus/panda-wiki-${{ matrix.project == 'admin' && 'nginx' || 'app' }}:v${{ needs.build.outputs.version }}
+          tags: crpi-om4xfxfotlzu97hi.cn-shenzhen.personal.cr.aliyuncs.com/c2c/panda-wiki-${{ matrix.project == 'admin' && 'nginx' || 'app' }}:v${{ needs.build.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
