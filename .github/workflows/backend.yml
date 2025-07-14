@@ -63,7 +63,7 @@ jobs:
           file: ./backend/Dockerfile.${{ matrix.service }}
           push: ${{ startsWith(github.ref, 'refs/tags/') }}
           platforms: linux/amd64, linux/arm64
-          tags: crpi-om4xfxfotlzu97hi.cn-shenzhen.personal.cr.aliyuncs.com/c2c/panda-wiki-${{ matrix.service }}:${{ steps.get_version.outputs.VERSION }}
+          tags: crpi-om4xfxfotlzu97hi.cn-shenzhen.personal.cr.aliyuncs.com/c3c/panda-wiki-${{ matrix.service }}:${{ steps.get_version.outputs.VERSION }}
           build-args: |
             VERSION=${{ steps.get_version.outputs.VERSION }}
           cache-from: |
