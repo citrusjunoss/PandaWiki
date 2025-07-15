@@ -3,14 +3,17 @@ package pg
 import (
 	"context"
 
+	"github.com/cloudwego/eino/schema"
 	"gorm.io/gorm"
 
 	"github.com/chaitin/panda-wiki/domain"
+	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/store/pg"
 )
 
 type ConversationRepository struct {
-	db *pg.DB
+	db     *pg.DB
+	logger *log.Logger
 }
 
 func NewConversationRepository(db *pg.DB) *ConversationRepository {
@@ -134,4 +137,57 @@ func (r *ConversationRepository) GetConversationCount(ctx context.Context, kbID 
 		return 0, err
 	}
 	return count, nil
+}
+
+func (r *ConversationRepository) GetConversationMessagesDetailByID(ctx context.Context, conversationId string, messageId string) (*domain.ConversationMessage, error) {
+	message := &domain.ConversationMessage{}
+	if err := r.db.WithContext(ctx).
+		Model(&domain.ConversationMessage{}).
+		Where("conversation_id = ?", conversationId).
+		Where("id = ?", messageId).
+		First(&message).Error; err != nil {
+		return nil, err
+	}
+	return message, nil
+}
+
+// 更新反馈信息
+func (r *ConversationRepository) UpdateMessageFeedback(ctx context.Context, feedback *domain.FeedbackRequest) error {
+	// 更新字段
+	feedbackInfo := domain.FeedBackInfo{
+		Score:           feedback.Score,
+		FeedbackType:    feedback.Type,
+		FeedbackContent: feedback.FeedbackContent,
+	}
+
+	// 更新消息的反馈信息
+	if err := r.db.WithContext(ctx).Model(&domain.ConversationMessage{}).
+		Where("id = ?", feedback.MessageId).
+		Where("conversation_id = ?", feedback.ConversationId).
+		Update("info", feedbackInfo).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *ConversationRepository) GetConversationFeedBackInfoByIDs(ctx context.Context, conversationIDs []string) (map[string]*domain.FeedBackInfo, error) {
+	if len(conversationIDs) == 0 {
+		return nil, nil
+	}
+
+	messages := []domain.ConversationMessage{}
+	if err := r.db.WithContext(ctx).Model(&domain.ConversationMessage{}).
+		Where("conversation_id IN (?)", conversationIDs).
+		Where("info is not null AND info->>'score' != ?", "0").
+		Where("role = ?", schema.Assistant).
+		Order("created_at ASC").
+		Select("conversation_id, info").Find(&messages).Error; err != nil {
+		r.logger.Error("GetConversationFeedBackInfoByIDs failed, error:", log.Error(err))
+		return nil, err
+	}
+	result := make(map[string]*domain.FeedBackInfo, 0)
+	for _, message := range messages {
+		result[message.ConversationID] = &message.Info
+	}
+	return result, nil
 }

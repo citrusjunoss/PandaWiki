@@ -1,10 +1,11 @@
 'use client';
 
-import { ChunkResultItem } from '@/assets/type';
+import { ChunkResultItem, ConversationItem } from '@/assets/type';
 import { useStore } from '@/provider';
 import SSEClient from '@/utils/fetch';
 import { Box, Stack } from '@mui/material';
 import { message } from 'ct-mui';
+import dayjs from 'dayjs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ChatResult from './ChatResult';
 import ChatTab from './ChatTab';
@@ -21,7 +22,9 @@ const Chat = () => {
     chunk_result: ChunkResultItem[];
   }> | null>(null);
 
-  const [conversation, setConversation] = useState<{ q: string, a: string }[]>([]);
+  const messageIdRef = useRef('');
+
+  const [conversation, setConversation] = useState<ConversationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [thinking, setThinking] = useState<keyof typeof AnswerStatus>(4);
   const [nonce, setNonce] = useState('');
@@ -30,7 +33,6 @@ const Chat = () => {
   const [conversationId, setConversationId] = useState('');
   const [answer, setAnswer] = useState('');
   const [isUserScrolling, setIsUserScrolling] = useState(false);
-
   const [showType, setShowType] = useState<'chat' | 'search'>('chat');
 
   const catalogSetting = kbDetail?.settings?.catalog_settings
@@ -56,6 +58,8 @@ const Chat = () => {
         ({ type, content, chunk_result }) => {
           if (type === 'conversation_id') {
             setConversationId((prev) => prev + content);
+          } else if (type === 'message_id') {
+            messageIdRef.current += content;
           } else if (type === 'nonce') {
             setNonce((prev) => prev + content);
           } else if (type === 'error') {
@@ -70,6 +74,16 @@ const Chat = () => {
             });
             if (content) message.error(content);
           } else if (type === 'done') {
+            setAnswer(prevAnswer => {
+              setConversation((prev) => {
+                const newConversation = [...prev];
+                newConversation[newConversation.length - 1].a = prevAnswer;
+                newConversation[newConversation.length - 1].update_time = dayjs().format('YYYY-MM-DD HH:mm:ss');
+                newConversation[newConversation.length - 1].message_id = messageIdRef.current;
+                return newConversation;
+              });
+              return '';
+            });
             setChunkLoading(false);
             setLoading(false);
             setThinking(4);
@@ -100,17 +114,13 @@ const Chat = () => {
 
   const onSearch = (q: string, reset: boolean = false) => {
     if (loading || !q.trim()) return;
-    const newConversation = reset ? [] : [...conversation.slice(0, -1)];
-    if (answer) {
-      newConversation.push({ q: conversation[conversation.length - 1].q, a: answer });
-    }
-    newConversation.push({ q, a: '' });
+    const newConversation = reset ? [] : [...conversation];
+    newConversation.push({ q, a: '', score: 0, message_id: '', update_time: '' });
+    messageIdRef.current = '';
     setConversation(newConversation);
     setAnswer('');
     setChunkResult([]);
-    setTimeout(() => {
-      chatAnswer(q);
-    }, 0);
+    setTimeout(() => chatAnswer(q), 0);
   };
 
   const handleSearchAbort = () => {
@@ -159,6 +169,24 @@ const Chat = () => {
           'Content-Type': 'application/json',
           'x-simple-auth-password': token || '',
         },
+        onCancel: () => {
+          setLoading(false);
+          setThinking(4);
+          setAnswer((prev) => {
+            let value = ''
+            if (prev) {
+              value = prev + '\n\n<error>Request canceled</error>';
+            }
+            setConversation((prev) => {
+              const newConversation = [...prev];
+              newConversation[newConversation.length - 1].a = value;
+              newConversation[newConversation.length - 1].update_time = dayjs().format('YYYY-MM-DD HH:mm:ss');
+              newConversation[newConversation.length - 1].message_id = messageIdRef.current;
+              return newConversation;
+            });
+            return '';
+          });
+        }
       });
     }
   }, []);
@@ -169,11 +197,13 @@ const Chat = () => {
       <Box sx={{ mx: 3 }}>
         {showType === 'chat' ? <ChatResult
           conversation={conversation}
+          conversation_id={conversationId}
           answer={answer}
           loading={loading}
           thinking={thinking}
           setThinking={setThinking}
           onSearch={onSearch}
+          setConversation={setConversation}
           handleSearchAbort={handleSearchAbort}
         /> : <SearchResult list={chunkResult} loading={chunkLoading} />}
       </Box>
@@ -196,11 +226,13 @@ const Chat = () => {
         <Box sx={{ position: 'relative', flex: 1, width: 0 }}>
           <ChatResult
             conversation={conversation}
+            conversation_id={conversationId}
             answer={answer}
             loading={loading}
             thinking={thinking}
             setThinking={setThinking}
             onSearch={onSearch}
+            setConversation={setConversation}
             handleSearchAbort={handleSearchAbort}
           />
         </Box>

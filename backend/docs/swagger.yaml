@@ -69,20 +69,26 @@ definitions:
         description: seo
         type: string
       dingtalk_bot_client_id:
-        description: DingTalkBot
         type: string
       dingtalk_bot_client_secret:
         type: string
+      dingtalk_bot_is_enabled:
+        description: DingTalkBot
+        type: boolean
       dingtalk_bot_template_id:
         type: string
-      discord_bot_token:
+      discord_bot_is_enabled:
         description: DisCordBot
+        type: boolean
+      discord_bot_token:
         type: string
       feishu_bot_app_id:
-        description: FeishuBot
         type: string
       feishu_bot_app_secret:
         type: string
+      feishu_bot_is_enabled:
+        description: FeishuBot
+        type: boolean
       footer_settings:
         allOf:
         - $ref: '#/definitions/domain.FooterSettings'
@@ -118,19 +124,23 @@ definitions:
         type: string
       wechat_app_encodingaeskey:
         type: string
+      wechat_app_is_enabled:
+        description: WechatAppBot
+        type: boolean
       wechat_app_secret:
         type: string
       wechat_app_token:
-        description: WechatAppBot
         type: string
       wechat_service_corpid:
         type: string
       wechat_service_encodingaeskey:
         type: string
+      wechat_service_is_enabled:
+        description: WechatServiceBot
+        type: boolean
       wechat_service_secret:
         type: string
       wechat_service_token:
-        description: WechatServiceBot
         type: string
       welcome_str:
         description: welcome
@@ -157,20 +167,26 @@ definitions:
         description: seo
         type: string
       dingtalk_bot_client_id:
-        description: DingTalkBot
         type: string
       dingtalk_bot_client_secret:
         type: string
+      dingtalk_bot_is_enabled:
+        description: DingTalkBot
+        type: boolean
       dingtalk_bot_template_id:
         type: string
-      discord_bot_token:
+      discord_bot_is_enabled:
         description: DisCordBot
+        type: boolean
+      discord_bot_token:
         type: string
       feishu_bot_app_id:
-        description: FeishuBot
         type: string
       feishu_bot_app_secret:
         type: string
+      feishu_bot_is_enabled:
+        description: FeishuBot
+        type: boolean
       footer_settings:
         allOf:
         - $ref: '#/definitions/domain.FooterSettings'
@@ -206,19 +222,23 @@ definitions:
         type: string
       wechat_app_encodingaeskey:
         type: string
+      wechat_app_is_enabled:
+        description: WechatAppBot
+        type: boolean
       wechat_app_secret:
         type: string
       wechat_app_token:
-        description: WechatAppBot
         type: string
       wechat_service_corpid:
         type: string
       wechat_service_encodingaeskey:
         type: string
+      wechat_service_is_enabled:
+        description: WechatServiceBot
+        type: boolean
       wechat_service_secret:
         type: string
       wechat_service_token:
-        description: WechatServiceBot
         type: string
       welcome_str:
         description: welcome
@@ -383,6 +403,10 @@ definitions:
         $ref: '#/definitions/domain.AppType'
       created_at:
         type: string
+      feedback_info:
+        allOf:
+        - $ref: '#/definitions/domain.FeedBackInfo'
+        description: 用户反馈信息
       id:
         type: string
       info:
@@ -410,6 +434,10 @@ definitions:
         type: string
       id:
         type: string
+      info:
+        allOf:
+        - $ref: '#/definitions/domain.FeedBackInfo'
+        description: feedbackinfo
       model:
         type: string
       prompt_tokens:
@@ -571,6 +599,47 @@ definitions:
       title:
         type: string
     type: object
+  domain.FeedBackInfo:
+    properties:
+      feedback_content:
+        type: string
+      feedback_type:
+        $ref: '#/definitions/domain.FeedbackType'
+      score:
+        $ref: '#/definitions/domain.ScoreType'
+    type: object
+  domain.FeedbackRequest:
+    properties:
+      conversation_id:
+        type: string
+      feedback_content:
+        description: 限制内容长度
+        maxLength: 200
+        type: string
+      message_id:
+        type: string
+      score:
+        allOf:
+        - $ref: '#/definitions/domain.ScoreType'
+        description: -1 踩 ,0 1 赞成
+      type:
+        allOf:
+        - $ref: '#/definitions/domain.FeedbackType'
+        description: 1 内容不准确，2 没有帮助，3 其他
+    required:
+    - conversation_id
+    - message_id
+    type: object
+  domain.FeedbackType:
+    enum:
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-varnames:
+    - ContentErr
+    - NoHelp
+    - Other
   domain.FooterSettings:
     properties:
       brand_desc:
@@ -1061,6 +1130,14 @@ definitions:
       success:
         type: boolean
     type: object
+  domain.ScoreType:
+    enum:
+    - 1
+    - -1
+    type: integer
+    x-enum-varnames:
+    - Like
+    - DisLike
   domain.ScrapeReq:
     properties:
       kb_id:
@@ -2786,6 +2863,28 @@ paths:
       summary: GetWidgetAppInfo
       tags:
       - share_app
+  /share/v1/chat/feedback:
+    post:
+      consumes:
+      - application/json
+      description: Process user feedback for chat conversations
+      parameters:
+      - description: feedback request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.FeedbackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+      summary: Handle chat feedback
+      tags:
+      - share_chat
   /share/v1/chat/message:
     post:
       consumes:

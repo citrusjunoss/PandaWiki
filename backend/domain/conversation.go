@@ -1,6 +1,9 @@
 package domain
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/cloudwego/eino/schema"
@@ -38,6 +41,27 @@ type ConversationMessage struct {
 	// stats
 	RemoteIP  string    `json:"remote_ip"`
 	CreatedAt time.Time `json:"created_at"`
+
+	// feedbackinfo
+	Info FeedBackInfo `json:"info" gorm:"column:info;type:jsonb"`
+}
+
+type FeedBackInfo struct {
+	Score           ScoreType    `json:"score"`
+	FeedbackType    FeedbackType `json:"feedback_type"`
+	FeedbackContent string       `json:"feedback_content"`
+}
+
+func (f *FeedBackInfo) Value() (driver.Value, error) {
+	return json.Marshal(f)
+}
+
+func (f *FeedBackInfo) Scan(value any) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("invalid feed back info type")
+	}
+	return json.Unmarshal(b, &f)
 }
 
 type ConversationReference struct {
@@ -72,6 +96,8 @@ type ConversationListItem struct {
 	IPAddress *IPAddress `json:"ip_address" gorm:"-"`
 
 	CreatedAt time.Time `json:"created_at"`
+
+	FeedBackInfo *FeedBackInfo `json:"feedback_info" gorm:"-"` // 用户反馈信息
 }
 
 type ConversationDetailResp struct {

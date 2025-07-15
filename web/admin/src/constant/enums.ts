@@ -31,25 +31,32 @@ export const IconMap = {
 
 export const AppType = {
   1: {
-    label: 'Wiki 站点',
+    label: 'Wiki 网站',
+    icon: 'icon-a-Webyingyong',
   },
   2: {
     label: '网页挂件',
+    icon: 'icon-wangyeguajian',
   },
   3: {
     label: '钉钉机器人',
+    icon: 'icon-dingdingjiqiren',
   },
   4: {
     label: '飞书机器人',
+    icon: 'icon-feishujiqiren',
   },
   5: {
     label: '企业微信机器人',
+    icon: 'icon-qiyeweixinjiqiren',
   },
   6: {
     label: '企业微信客服',
+    icon: 'icon-qiyeweixinkefu',
   },
   7: {
-    label: 'Discord 机器人'
+    label: 'Discord 机器人',
+    icon: 'icon-a-discordjiqiren',
   }
 }
 
@@ -210,3 +217,9 @@ export const MAC_SYMBOLS = {
 }
 
 export const chartColor = ['#3082FF', '#FFD268', '#9E68FC', '#3248F2', '#63CFC3', '#FF5576']
+
+export const FeedbackType = {
+  1: '内容不准确',
+  2: '没有帮助',
+  3: '其他',
+}

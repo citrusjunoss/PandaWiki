@@ -232,6 +232,7 @@ export type AppListItem = {
 } & AppCommonInfo
 
 export type DingBotSetting = {
+  dingtalk_bot_is_enabled: boolean,
   dingtalk_bot_client_id: string,
   dingtalk_bot_client_secret: string,
   dingtalk_bot_welcome_str: string,
@@ -239,6 +240,7 @@ export type DingBotSetting = {
 }
 
 export type WecomBotSetting = {
+  wechat_app_is_enabled: boolean,
   wechat_app_agent_id: number
   wechat_app_secret: string
   wechat_app_token: string
@@ -247,6 +249,7 @@ export type WecomBotSetting = {
 }
 
 export type WecomBotServiceSetting = {
+  wechat_service_is_enabled: boolean,
   wechat_service_secret: string
   wechat_service_token: string
   wechat_service_encodingaeskey: string
@@ -254,12 +257,14 @@ export type WecomBotServiceSetting = {
 }
 
 export type FeishuBotSetting = {
+  feishu_bot_is_enabled: boolean,
   feishu_bot_app_id: string
   feishu_bot_app_secret: string
   feishu_bot_welcome_str: string
 }
 
 export type DiscordBotSetting = {
+  discord_bot_is_enabled: boolean,
   discord_bot_token: string
 }
 
@@ -422,9 +427,11 @@ export type GetConversationListData = {
 
 export type ConversationListItem = {
   app_name: string,
+  app_type: keyof typeof AppType,
   created_at: string,
   id: string,
   model: string,
+  feedback_info: FeedbackInfo
   ip_address: {
     city: string,
     country: string,
@@ -443,6 +450,12 @@ export type ConversationListItem = {
       real_name?: string
     }
   }
+}
+
+export type FeedbackInfo = {
+  feedback_content: string,
+  feedback_type: number,
+  score: number,
 }
 
 export type ConversationDetail = {
@@ -464,6 +477,7 @@ export type ConversationDetail = {
     remote_ip: string,
     role: 'assistant' | 'user',
     total_tokens: number
+    info: FeedbackInfo
   }[],
   references: {
     app_id: string,
@@ -482,7 +496,13 @@ export type ChatConversationItem = {
 
 export type ChatConversationPair = {
   user: string,
-  assistant: string
+  assistant: string,
+  created_at: string,
+  info: {
+    feedback_content: string,
+    feedback_type: number,
+    score: number,
+  }
 }
 
 export type ImportDocType = 'URL' | 'RSS' | 'Sitemap' | 'OfflineFile' | 'Notion' | 'Epub' | 'Wiki.js' | 'Feishu' | 'Confluence'

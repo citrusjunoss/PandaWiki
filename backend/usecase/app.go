@@ -164,7 +164,7 @@ func (u *AppUsecase) updateFeishuBot(app *domain.App) {
 		}
 	}
 
-	if app.Settings.FeishuBotAppID == "" || app.Settings.FeishuBotAppSecret == "" {
+	if (app.Settings.FeishuBotIsEnabled != nil && !*app.Settings.FeishuBotIsEnabled) || app.Settings.FeishuBotAppID == "" || app.Settings.FeishuBotAppSecret == "" {
 		return
 	}
 
@@ -204,7 +204,7 @@ func (u *AppUsecase) updateDingTalkBot(app *domain.App) {
 		}
 	}
 
-	if app.Settings.DingTalkBotClientID == "" || app.Settings.DingTalkBotClientSecret == "" {
+	if (app.Settings.DingTalkBotIsEnabled != nil && !*app.Settings.DingTalkBotIsEnabled) || app.Settings.DingTalkBotClientID == "" || app.Settings.DingTalkBotClientSecret == "" {
 		return
 	}
 
@@ -248,8 +248,8 @@ func (u *AppUsecase) updateDisCordBot(app *domain.App) {
 			delete(u.discordBots, app.ID)
 		}
 	}
-	token := app.Settings.DisCordBotToken
-	if token == "" {
+	token := app.Settings.DiscordBotToken
+	if (app.Settings.DiscordBotIsEnabled != nil && !*app.Settings.DiscordBotIsEnabled) || token == "" {
 		return
 	}
 
@@ -301,27 +301,30 @@ func (u *AppUsecase) GetAppDetailByKBIDAndAppType(ctx context.Context, kbID stri
 		HeadCode:           app.Settings.HeadCode,
 		BodyCode:           app.Settings.BodyCode,
 		// DingTalkBot
+		DingTalkBotIsEnabled:    app.Settings.DingTalkBotIsEnabled,
 		DingTalkBotClientID:     app.Settings.DingTalkBotClientID,
 		DingTalkBotClientSecret: app.Settings.DingTalkBotClientSecret,
 		DingTalkBotTemplateID:   app.Settings.DingTalkBotTemplateID,
 		// FeishuBot
+		FeishuBotIsEnabled: app.Settings.FeishuBotIsEnabled,
 		FeishuBotAppID:     app.Settings.FeishuBotAppID,
 		FeishuBotAppSecret: app.Settings.FeishuBotAppSecret,
-
 		// WechatBot
+		WeChatAppIsEnabled:      app.Settings.WeChatAppIsEnabled,
 		WeChatAppToken:          app.Settings.WeChatAppToken,
 		WeChatAppCorpID:         app.Settings.WeChatAppCorpID,
 		WeChatAppEncodingAESKey: app.Settings.WeChatAppEncodingAESKey,
 		WeChatAppSecret:         app.Settings.WeChatAppSecret,
 		WeChatAppAgentID:        app.Settings.WeChatAppAgentID,
-
 		// WechatServiceBot
+		WeChatServiceIsEnabled:      app.Settings.WeChatServiceIsEnabled,
 		WeChatServiceToken:          app.Settings.WeChatServiceToken,
 		WeChatServiceEncodingAESKey: app.Settings.WeChatServiceEncodingAESKey,
 		WeChatServiceCorpID:         app.Settings.WeChatServiceCorpID,
 		WeChatServiceSecret:         app.Settings.WeChatServiceSecret,
-
-		DisCordBotToken: app.Settings.DisCordBotToken,
+		// Discord
+		DiscordBotIsEnabled: app.Settings.DiscordBotIsEnabled,
+		DiscordBotToken:     app.Settings.DiscordBotToken,
 		// theme
 		ThemeMode:     app.Settings.ThemeMode,
 		ThemeAndStyle: app.Settings.ThemeAndStyle,

@@ -149,6 +149,31 @@ class ApiClient {
       authToken: data.authToken,
     });
   }
+
+  // 客服端反馈
+  async clientFeedback(data: {
+    kb_id: string,
+    authToken?: string,
+    conversation_id: string,
+    message_id: string,
+    type: number,
+    score: number,
+    feedback_content?: string
+  }): Promise<Response<void>> {
+    return this.request(window?.location.origin + '/client/v1/chat/feedback', {
+      method: 'POST',
+      body: JSON.stringify({
+        conversation_id: data.conversation_id,
+        message_id: data.message_id,
+        type: data.type,
+        score: data.score,
+        feedback_content: data.feedback_content,
+      }),
+    }, {
+      kb_id: data.kb_id,
+      authToken: data.authToken,
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

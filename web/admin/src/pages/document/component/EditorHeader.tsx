@@ -7,19 +7,20 @@ import { addOpacityToColor, getShortcutKeyText } from "@/utils"
 import { Box, Button, IconButton, Stack, Tooltip, useTheme } from "@mui/material"
 import { Ellipsis, Icon, MenuSelect, Message } from "ct-mui"
 import { UseTiptapEditorReturn } from "ct-tiptap-editor"
-import { Dayjs } from "dayjs"
+import dayjs from "dayjs"
 import { useState } from "react"
 
 interface EditorHeaderProps {
   edited: boolean
   editorRef: UseTiptapEditorReturn
   detail: NodeDetail | null
-  updateAt: Dayjs | null
+  setDetail?: (data: NodeDetail) => void
   onSave: (auto?: boolean, publish?: boolean) => void
-  refresh?: () => void
+  resetTimer?: () => void
+  cancelTimer?: () => void
 }
 
-const EditorHeader = ({ edited, editorRef, detail, updateAt, onSave, refresh }: EditorHeaderProps) => {
+const EditorHeader = ({ edited, editorRef, detail, onSave, resetTimer, cancelTimer, setDetail }: EditorHeaderProps) => {
   const editor = editorRef?.editor || null
   const theme = useTheme()
   const { kb_id } = useAppSelector(state => state.config)
@@ -37,6 +38,7 @@ const EditorHeader = ({ edited, editorRef, detail, updateAt, onSave, refresh }: 
 
   const handleExport = async (type: string) => {
     if (!editorRef || !editor) return
+    cancelTimer?.()
     if (type === 'html') {
       const html = editorRef.getHtml()
       if (!html) return
@@ -61,6 +63,7 @@ const EditorHeader = ({ edited, editorRef, detail, updateAt, onSave, refresh }: 
       URL.revokeObjectURL(url)
       Message.success('导出成功')
     }
+    resetTimer?.()
   }
 
   if (!detail) return null
@@ -72,9 +75,16 @@ const EditorHeader = ({ edited, editorRef, detail, updateAt, onSave, refresh }: 
     }}>
       <Stack direction={'row'} alignItems={'center'} gap={1} flex={1}>
         <Emoji sx={{ flexShrink: 0 }} type={detail?.type} value={detail?.meta?.emoji} onChange={(value) => {
+          cancelTimer?.()
           updateNode({ id: detail.id, kb_id: kb_id, emoji: value }).then(() => {
             Message.success('修改成功')
-            refresh?.()
+            setDetail?.({
+              ...detail,
+              updated_at: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+              meta: { ...detail.meta, emoji: value }
+            })
+          }).finally(() => {
+            resetTimer?.()
           })
         }} />
         <Ellipsis sx={{ fontSize: 18, fontWeight: 'bold', width: 0, flex: 1 }}>{detail?.name}</Ellipsis>
@@ -82,7 +92,7 @@ const EditorHeader = ({ edited, editorRef, detail, updateAt, onSave, refresh }: 
       <Stack direction={'row'} alignItems={'center'} gap={2} flexShrink={0}>
         <Stack direction={'row'} alignItems={'center'} gap={0.5} sx={{ fontSize: 12, color: 'text.auxiliary' }}>
           <Icon type='icon-baocun' />
-          {updateAt?.format('YYYY-MM-DD HH:mm:ss')}
+          {dayjs(detail.updated_at).format('YYYY-MM-DD HH:mm:ss')}
         </Stack>
         <MenuSelect list={[
           {
@@ -130,6 +140,7 @@ const EditorHeader = ({ edited, editorRef, detail, updateAt, onSave, refresh }: 
               重命名
             </Stack>,
             onClick: () => {
+              cancelTimer?.()
               setRenameOpen(true)
             }
           },
@@ -238,8 +249,9 @@ const EditorHeader = ({ edited, editorRef, detail, updateAt, onSave, refresh }: 
       </Stack>
     </Stack>
     <DocAddByCustomText type={detail.type} open={renameOpen} onClose={() => {
+      resetTimer?.()
       setRenameOpen(false)
-    }} data={{ id: detail.id, name: detail.name, emoji: detail.meta?.emoji || '' }} refresh={refresh} />
+    }} data={detail} setDetail={setDetail} />
     <DocDelete open={delOpen} onClose={() => {
       setDelOpen(false)
     }} data={[{ ...detail, emoji: detail.meta?.emoji || '', parent_id: '', summary: detail.meta?.summary || '', position: 0, status: 1, visibility: 2 } as NodeListItem]} refresh={() => {

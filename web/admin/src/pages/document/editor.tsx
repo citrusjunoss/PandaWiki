@@ -4,7 +4,7 @@ import { setKbId } from "@/store/slices/config";
 import { Box, Stack, useMediaQuery } from "@mui/material";
 import { Message } from "ct-mui";
 import { TiptapEditor, TiptapToolbar, useTiptapEditor } from 'ct-tiptap-editor';
-import dayjs, { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import VersionPublish from "../release/components/VersionPublish";
@@ -20,38 +20,33 @@ const DocEditor = () => {
   const isWideScreen = useMediaQuery('(min-width:1400px)')
   const [edited, setEdited] = useState(false)
   const [detail, setDetail] = useState<NodeDetail | null>(null)
-  const [updateAt, setUpdateAt] = useState<Dayjs | null>(null)
+  const [docContent, setDocContent] = useState('')
   const [headings, setHeadings] = useState<{ id: string, title: string, heading: number }[]>([])
   const [maxH, setMaxH] = useState(0)
   const [publishOpen, setPublishOpen] = useState(false)
 
-  const getDetail = () => {
-    getNodeDetail({ id }).then(res => {
-      setDetail(res)
-      setEdited(false)
-      dispatch(setKbId(res.kb_id))
-      setUpdateAt(dayjs(res.updated_at))
-    })
-  }
-
-  const updateNav = async () => {
-    if (!editorRef) return
-    const headings = await editorRef.getNavs() || []
-    setHeadings(headings)
-    setMaxH(Math.min(...headings.map((h: any) => h.heading)))
-  }
-
   const handleSave = async (auto?: boolean, publish?: boolean, html?: string) => {
     if (!editorRef || !detail) return
+    cancelTimer()
     const content = html || editorRef.getHtml()
     try {
       await updateNode({ id, content, kb_id: detail.kb_id })
-      if (auto === true) Message.success('自动保存成功')
-      else if (auto === undefined) Message.success('保存成功')
-      setEdited(false)
-      if (publish) setPublishOpen(true)
-      setUpdateAt(dayjs())
-      updateNav()
+      setDetail({
+        ...detail,
+        updated_at: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+        content
+      })
+      if (publish) {
+        setPublishOpen(true)
+      }
+      if (auto === true) {
+        Message.success('自动保存成功')
+      } else {
+        setEdited(false)
+        setDocContent(content)
+      }
+      if (auto === undefined) Message.success('保存成功')
+      resetTimer()
     } catch (error) {
       Message.error('保存失败')
     }
@@ -86,31 +81,49 @@ const DocEditor = () => {
     }
   })
 
-  useEffect(() => {
+  const getDetail = (unCover?: boolean) => {
+    getNodeDetail({ id }).then(res => {
+      setDetail(res)
+      if (!unCover) setDocContent(res.content || '')
+      setEdited(false)
+      dispatch(setKbId(res.kb_id))
+    })
+  }
+
+  const cancelTimer = () => {
     if (timer.current) clearInterval(timer.current)
-    if (detail && editorRef) {
-      editorRef.setContent(detail.content || '').then((headings) => {
+  }
+
+  const resetTimer = () => {
+    cancelTimer()
+    timer.current = setInterval(() => {
+      handleSave(true)
+    }, 1000 * 60)
+  }
+
+  useEffect(() => {
+    cancelTimer()
+    if (editorRef) {
+      editorRef.setContent(docContent || '').then((headings) => {
         setHeadings(headings)
         setMaxH(Math.min(...headings.map(h => h.heading)))
       })
-      timer.current = setInterval(() => {
-        handleSave(true)
-      }, 1000 * 60)
+      resetTimer()
     }
-    return () => {
-      if (timer.current) clearInterval(timer.current)
-    }
-  }, [detail])
+    return () => cancelTimer()
+  }, [docContent])
 
   useEffect(() => {
-    if (id) {
-      if (timer.current) clearInterval(timer.current)
+    if (id && editorRef) {
+      cancelTimer()
       getDetail()
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
       }, 60)
     }
+  }, [id])
 
+  useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && edited) {
         handleSave(true)
@@ -120,19 +133,11 @@ const DocEditor = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [id])
-
-  // 当从窄屏切换到宽屏时，如果还没有数据则请求
-  useEffect(() => {
-    if (isWideScreen && id && !detail) {
-      getDetail()
-    }
-  }, [isWideScreen, id, detail])
+  }, [])
 
   if (!editorRef) return <></>
 
   return <Box sx={{ color: 'text.primary', pb: 2 }}>
-    {/* 固定头部 */}
     <Box sx={{
       position: 'fixed',
       top: 0,
@@ -149,13 +154,12 @@ const DocEditor = () => {
         <EditorHeader
           edited={edited}
           detail={detail}
+          setDetail={setDetail}
           editorRef={editorRef}
-          updateAt={updateAt}
+          resetTimer={resetTimer}
+          cancelTimer={cancelTimer}
           onSave={(auto, publish) => handleSave(auto, publish)}
-          refresh={async () => {
-            await handleSave(false)
-            getDetail()
-          }} />
+        />
       </Box>
       <Box sx={{
         width: 900,
@@ -164,20 +168,17 @@ const DocEditor = () => {
         <TiptapToolbar editorRef={editorRef} />
       </Box>
     </Box>
-
-    {/* 三栏布局容器 */}
     <Box sx={{
       pt: '105px',
       display: 'flex',
       justifyContent: 'center',
-      gap: isWideScreen ? 1 : 0, // 8px间隔
+      gap: isWideScreen ? 1 : 0,
     }}>
-      {/* 左侧边栏 */}
       {isWideScreen && (
         <Box sx={{
           width: 292,
           position: 'fixed',
-          left: 'calc(50vw - 700px - 4px)', // 居中定位：视口中心 - 总宽度一半 - 间隔一半
+          left: 'calc(50vw - 700px - 4px)',
           top: '105px',
           height: 'calc(100vh - 105px)',
           overflowY: 'auto',
@@ -189,8 +190,6 @@ const DocEditor = () => {
           />
         </Box>
       )}
-
-      {/* 中间内容区域 */}
       <Box className='editor-content' sx={{
         width: 800,
         overflowY: 'auto',
@@ -208,13 +207,11 @@ const DocEditor = () => {
       }}>
         <TiptapEditor editorRef={editorRef} />
       </Box>
-
-      {/* 右侧边栏 */}
       {isWideScreen && (
         <Box sx={{
           width: 292,
           position: 'fixed',
-          right: 'calc(50vw - 700px - 4px)', // 居中定位：视口中心 - 总宽度一半 - 间隔一半
+          right: 'calc(50vw - 700px - 4px)',
           top: '105px',
           height: 'calc(100vh - 105px)',
           overflowY: 'auto',
@@ -226,6 +223,9 @@ const DocEditor = () => {
               id={detail?.id || ''}
               name={detail?.name || ''}
               summary={detail?.meta.summary || ''}
+              resetTimer={resetTimer}
+              cancelTimer={cancelTimer}
+              refresh={() => getDetail(true)}
             />
             <EditorDocNav
               title={detail?.name}
@@ -236,7 +236,6 @@ const DocEditor = () => {
         </Box>
       )}
     </Box>
-
     <VersionPublish
       open={publishOpen}
       defaultSelected={[id]}

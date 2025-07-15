@@ -7,9 +7,12 @@ interface EditorSummaryProps {
   id: string
   name: string
   summary: string
+  refresh?: () => void
+  resetTimer?: () => void
+  cancelTimer?: () => void
 }
 
-const EditorSummary = ({ kb_id, id, name, summary: defaultSummary }: EditorSummaryProps) => {
+const EditorSummary = ({ kb_id, id, name, summary: defaultSummary, refresh, resetTimer, cancelTimer }: EditorSummaryProps) => {
   const [open, setOpen] = useState(false)
   const [summary, setSummary] = useState(defaultSummary || '')
 
@@ -33,7 +36,10 @@ const EditorSummary = ({ kb_id, id, name, summary: defaultSummary }: EditorSumma
           fontSize: 16,
           fontWeight: 'bold',
         }}>内容摘要</Box>
-        {!!summary && <Button sx={{ minWidth: 0, p: 0, height: 24 }} onClick={() => setOpen(true)}>
+        {!!summary && <Button sx={{ minWidth: 0, p: 0, height: 24 }} onClick={() => {
+          cancelTimer?.()
+          setOpen(true)
+        }}>
           修改
         </Button>}
       </Stack>
@@ -43,7 +49,10 @@ const EditorSummary = ({ kb_id, id, name, summary: defaultSummary }: EditorSumma
         fontSize: 14
       }}>
         {!summary ? <Stack direction={'row'} alignItems={'center'} justifyContent={'center'} sx={{ fontSize: 12, color: 'text.auxiliary' }}>
-          暂无摘要，<Button sx={{ minWidth: 0, p: 0, fontSize: 12 }} onClick={() => setOpen(true)}>去生成</Button>
+          暂无摘要，<Button sx={{ minWidth: 0, p: 0, fontSize: 12 }} onClick={() => {
+            cancelTimer?.()
+            setOpen(true)
+          }}>去生成</Button>
         </Stack> : <Box sx={{
           fontSize: 14,
           color: 'text.secondary',
@@ -65,8 +74,12 @@ const EditorSummary = ({ kb_id, id, name, summary: defaultSummary }: EditorSumma
       data={{ id, name, summary }}
       onClose={() => {
         setOpen(false)
+        resetTimer?.()
       }}
-      refresh={(value) => setSummary(value || '')}
+      refresh={(value) => {
+        setSummary(value || '')
+        refresh?.()
+      }}
     />
   </>
 }

@@ -60,25 +60,30 @@ type AppSettings struct {
 	HeadCode string `json:"head_code,omitempty"`
 	BodyCode string `json:"body_code,omitempty"`
 	// DingTalkBot
+	DingTalkBotIsEnabled    *bool  `json:"dingtalk_bot_is_enabled,omitempty"`
 	DingTalkBotClientID     string `json:"dingtalk_bot_client_id,omitempty"`
 	DingTalkBotClientSecret string `json:"dingtalk_bot_client_secret,omitempty"`
 	DingTalkBotTemplateID   string `json:"dingtalk_bot_template_id,omitempty"`
 	// FeishuBot
+	FeishuBotIsEnabled *bool  `json:"feishu_bot_is_enabled,omitempty"`
 	FeishuBotAppID     string `json:"feishu_bot_app_id,omitempty"`
 	FeishuBotAppSecret string `json:"feishu_bot_app_secret,omitempty"`
 	// WechatAppBot
+	WeChatAppIsEnabled      *bool  `json:"wechat_app_is_enabled,omitempty"`
 	WeChatAppToken          string `json:"wechat_app_token,omitempty"`
 	WeChatAppEncodingAESKey string `json:"wechat_app_encodingaeskey,omitempty"`
 	WeChatAppCorpID         string `json:"wechat_app_corpid,omitempty"`
 	WeChatAppSecret         string `json:"wechat_app_secret,omitempty"`
 	WeChatAppAgentID        string `json:"wechat_app_agent_id,omitempty"`
 	// WechatServiceBot
+	WeChatServiceIsEnabled      *bool  `json:"wechat_service_is_enabled,omitempty"`
 	WeChatServiceToken          string `json:"wechat_service_token,omitempty"`
 	WeChatServiceEncodingAESKey string `json:"wechat_service_encodingaeskey,omitempty"`
 	WeChatServiceCorpID         string `json:"wechat_service_corpid,omitempty"`
 	WeChatServiceSecret         string `json:"wechat_service_secret,omitempty"`
 	// DisCordBot
-	DisCordBotToken string `json:"discord_bot_token,omitempty"`
+	DiscordBotIsEnabled *bool  `json:"discord_bot_is_enabled,omitempty"`
+	DiscordBotToken     string `json:"discord_bot_token,omitempty"`
 	// theme
 	ThemeMode     string        `json:"theme_mode,omitempty"`
 	ThemeAndStyle ThemeAndStyle `json:"theme_and_style"`
@@ -169,25 +174,30 @@ type AppSettingsResp struct {
 	HeadCode string `json:"head_code,omitempty"`
 	BodyCode string `json:"body_code,omitempty"`
 	// DingTalkBot
+	DingTalkBotIsEnabled    *bool  `json:"dingtalk_bot_is_enabled,omitempty"`
 	DingTalkBotClientID     string `json:"dingtalk_bot_client_id,omitempty"`
 	DingTalkBotClientSecret string `json:"dingtalk_bot_client_secret,omitempty"`
 	DingTalkBotTemplateID   string `json:"dingtalk_bot_template_id,omitempty"`
 	// FeishuBot
+	FeishuBotIsEnabled *bool  `json:"feishu_bot_is_enabled,omitempty"`
 	FeishuBotAppID     string `json:"feishu_bot_app_id,omitempty"`
 	FeishuBotAppSecret string `json:"feishu_bot_app_secret,omitempty"`
 	// WechatAppBot
+	WeChatAppIsEnabled      *bool  `json:"wechat_app_is_enabled,omitempty"`
 	WeChatAppToken          string `json:"wechat_app_token,omitempty"`
 	WeChatAppEncodingAESKey string `json:"wechat_app_encodingaeskey,omitempty"`
 	WeChatAppCorpID         string `json:"wechat_app_corpid,omitempty"`
 	WeChatAppSecret         string `json:"wechat_app_secret,omitempty"`
 	WeChatAppAgentID        string `json:"wechat_app_agent_id,omitempty"`
 	// WechatServiceBot
+	WeChatServiceIsEnabled      *bool  `json:"wechat_service_is_enabled,omitempty"`
 	WeChatServiceToken          string `json:"wechat_service_token,omitempty"`
 	WeChatServiceEncodingAESKey string `json:"wechat_service_encodingaeskey,omitempty"`
 	WeChatServiceCorpID         string `json:"wechat_service_corpid,omitempty"`
 	WeChatServiceSecret         string `json:"wechat_service_secret,omitempty"`
 	// DisCordBot
-	DisCordBotToken string `json:"discord_bot_token,omitempty"`
+	DiscordBotIsEnabled *bool  `json:"discord_bot_is_enabled,omitempty"`
+	DiscordBotToken     string `json:"discord_bot_token,omitempty"`
 	// theme
 	ThemeMode     string        `json:"theme_mode,omitempty"`
 	ThemeAndStyle ThemeAndStyle `json:"theme_and_style"`
