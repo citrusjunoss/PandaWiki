@@ -7,7 +7,9 @@ import (
 
 	"github.com/google/uuid"
 
+	v1 "github.com/chaitin/panda-wiki/api/kb/v1"
 	"github.com/chaitin/panda-wiki/config"
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/repo/cache"
@@ -20,17 +22,19 @@ type KnowledgeBaseUsecase struct {
 	repo     *pg.KnowledgeBaseRepository
 	nodeRepo *pg.NodeRepository
 	ragRepo  *mq.RAGRepository
+	userRepo *pg.UserRepository
 	rag      rag.RAGService
 	kbCache  *cache.KBRepo
 	logger   *log.Logger
 	config   *config.Config
 }
 
-func NewKnowledgeBaseUsecase(repo *pg.KnowledgeBaseRepository, nodeRepo *pg.NodeRepository, ragRepo *mq.RAGRepository, rag rag.RAGService, kbCache *cache.KBRepo, logger *log.Logger, config *config.Config) (*KnowledgeBaseUsecase, error) {
+func NewKnowledgeBaseUsecase(repo *pg.KnowledgeBaseRepository, nodeRepo *pg.NodeRepository, ragRepo *mq.RAGRepository, userRepo *pg.UserRepository, rag rag.RAGService, kbCache *cache.KBRepo, logger *log.Logger, config *config.Config) (*KnowledgeBaseUsecase, error) {
 	u := &KnowledgeBaseUsecase{
 		repo:     repo,
 		nodeRepo: nodeRepo,
 		ragRepo:  ragRepo,
+		userRepo: userRepo,
 		rag:      rag,
 		logger:   logger.WithModule("usecase.knowledge_base"),
 		config:   config,
@@ -39,7 +43,7 @@ func NewKnowledgeBaseUsecase(repo *pg.KnowledgeBaseRepository, nodeRepo *pg.Node
 	return u, nil
 }
 
-func (u *KnowledgeBaseUsecase) CreateKnowledgeBase(ctx context.Context, req *domain.CreateKnowledgeBaseReq) (string, error) {
+func (u *KnowledgeBaseUsecase) CreateKnowledgeBase(ctx context.Context, req *domain.CreateKnowledgeBaseReq, userId string) (string, error) {
 	// create kb in vector store
 	datasetID, err := u.rag.CreateKnowledgeBase(ctx)
 	if err != nil {
@@ -58,7 +62,13 @@ func (u *KnowledgeBaseUsecase) CreateKnowledgeBase(ctx context.Context, req *dom
 			Hosts:      req.Hosts,
 		},
 	}
-	if err := u.repo.CreateKnowledgeBase(ctx, kb); err != nil {
+
+	user, err := u.userRepo.GetUser(ctx, userId)
+	if err != nil {
+		return "", err
+	}
+
+	if err := u.repo.CreateKnowledgeBase(ctx, req.MaxKB, kb, user); err != nil {
 		return "", err
 	}
 	return kbID, nil
@@ -72,13 +82,30 @@ func (u *KnowledgeBaseUsecase) GetKnowledgeBaseList(ctx context.Context) ([]*dom
 	return knowledgeBases, nil
 }
 
+func (u *KnowledgeBaseUsecase) GetKnowledgeBaseListByUserId(ctx context.Context, userId string) ([]*domain.KnowledgeBaseListItem, error) {
+	knowledgeBases, err := u.repo.GetKnowledgeBaseListByUserId(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	return knowledgeBases, nil
+}
+
 func (u *KnowledgeBaseUsecase) UpdateKnowledgeBase(ctx context.Context, req *domain.UpdateKnowledgeBaseReq) error {
-	if err := u.repo.UpdateKnowledgeBase(ctx, req); err != nil {
+	isChange, err := u.repo.UpdateKnowledgeBase(ctx, req)
+	if err != nil {
 		return err
 	}
+
+	if isChange {
+		if err := u.kbCache.ClearSession(ctx); err != nil {
+			return err
+		}
+	}
+
 	if err := u.kbCache.DeleteKB(ctx, req.ID); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -98,6 +125,16 @@ func (u *KnowledgeBaseUsecase) GetKnowledgeBase(ctx context.Context, kbID string
 		return nil, err
 	}
 	return kb, nil
+}
+
+func (u *KnowledgeBaseUsecase) GetKnowledgeBasePerm(ctx context.Context, kbID string, userID string) (consts.UserKBPermission, error) {
+
+	perm, err := u.repo.GetKBPermByUserId(ctx, kbID, userID)
+	if err != nil {
+		return "", err
+	}
+
+	return perm, nil
 }
 
 func (u *KnowledgeBaseUsecase) DeleteKnowledgeBase(ctx context.Context, kbID string) error {
@@ -158,4 +195,70 @@ func (u *KnowledgeBaseUsecase) GetKBReleaseList(ctx context.Context, req *domain
 	}
 
 	return domain.NewPaginatedResult(releases, uint64(total)), nil
+}
+
+func (u *KnowledgeBaseUsecase) GetKBUserList(ctx context.Context, req v1.KBUserListReq) ([]v1.KBUserListItemResp, error) {
+	users, err := u.repo.GetKBUserlist(ctx, req.KBId)
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (u *KnowledgeBaseUsecase) KBUserInvite(ctx context.Context, req v1.KBUserInviteReq) error {
+	user, err := u.userRepo.GetUser(ctx, req.UserId)
+	if err != nil {
+		return err
+	}
+	if user.Role == consts.UserRoleAdmin {
+		return fmt.Errorf("knowledge base can not invite to admin user")
+	}
+
+	if err := u.repo.CreateKBUser(ctx, &domain.KBUsers{
+		KBId:      req.KBId,
+		UserId:    req.UserId,
+		Perm:      req.Perm,
+		CreatedAt: time.Now(),
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *KnowledgeBaseUsecase) UpdateUserKB(ctx context.Context, req v1.KBUserUpdateReq, userID string) error {
+	user, err := u.userRepo.GetUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	kbUser, err := u.repo.GetKBUser(ctx, req.KBId, req.UserId)
+	if err != nil {
+		return err
+	}
+	if user.Role != consts.UserRoleAdmin && kbUser.Perm != consts.UserKBPermissionFullControl {
+		return fmt.Errorf("only admin can update user from knowledge base")
+	}
+
+	return u.repo.UpdateKBUserPerm(ctx, req.KBId, req.UserId, req.Perm)
+}
+
+func (u *KnowledgeBaseUsecase) KBUserDelete(ctx context.Context, req v1.KBUserDeleteReq, userID string) error {
+	user, err := u.userRepo.GetUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	kbUser, err := u.repo.GetKBUser(ctx, req.KBId, req.UserId)
+	if err != nil {
+		return err
+	}
+	if user.Role != consts.UserRoleAdmin && kbUser.Perm != consts.UserKBPermissionFullControl {
+		return fmt.Errorf("only admin can update user from knowledge base")
+	}
+	if err := u.repo.DeleteKBUser(ctx, req.KBId, req.UserId); err != nil {
+		return err
+	}
+
+	return nil
 }

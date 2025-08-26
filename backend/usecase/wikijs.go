@@ -14,34 +14,52 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/minio/minio-go/v7"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
-	"github.com/chaitin/panda-wiki/store/s3"
 	"github.com/chaitin/panda-wiki/utils"
 )
 
 type WikiJSUsecase struct {
 	logger      *log.Logger
-	minioClient *s3.MinioClient
+	fileusecase *FileUsecase
 }
 
-func NewWikiJSUsecase(logger *log.Logger, minioClient *s3.MinioClient) *WikiJSUsecase {
+func NewWikiJSUsecase(logger *log.Logger, fileusecase *FileUsecase) *WikiJSUsecase {
 	return &WikiJSUsecase{
 		logger:      logger.WithModule("usecase.wikiJSUsecase"),
-		minioClient: minioClient,
+		fileusecase: fileusecase,
 	}
 }
 
-func (u *WikiJSUsecase) AnalysisExportFile(ctx context.Context, f *multipart.FileHeader, kbID string) (*[]domain.WikiJSResp, error) {
-	file, err := f.Open()
+func (u *WikiJSUsecase) AnalysisExportFile(ctx context.Context, fileHeader *multipart.FileHeader, kbID string) (*[]domain.WikiJSResp, error) {
+	reader, err := fileHeader.Open()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open file failed: %v", err)
 	}
-	defer file.Close()
-	zipReader, err := zip.NewReader(file, f.Size)
+	defer reader.Close()
+	// 用户直接上传pages.json.gz文件的情况
+	if filepath.Ext(fileHeader.Filename) == ".gz" {
+		var pages []domain.WikiJSPage
+		gr, err := gzip.NewReader(reader)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.NewDecoder(gr).Decode(&pages); err != nil {
+			return nil, err
+		}
+		var res []domain.WikiJSResp
+		for _, page := range pages {
+			res = append(res, domain.WikiJSResp{
+				Id:      page.Id,
+				Title:   page.Title,
+				Content: page.Render,
+			})
+		}
+		return &res, nil
+	}
+	zipReader, err := zip.NewReader(reader, fileHeader.Size)
 	if err != nil {
 		return nil, err
 	}
@@ -87,22 +105,7 @@ func (u *WikiJSUsecase) AnalysisExportFile(ctx context.Context, f *multipart.Fil
 				return
 			}
 			defer file.Close()
-			if f.UncompressedSize64 == 0 {
-				return
-			}
-
-			_, err = u.minioClient.PutObject(
-				ctx,
-				domain.Bucket,
-				imgName,
-				file,
-				int64(f.UncompressedSize64),
-				minio.PutObjectOptions{
-					UserMetadata: map[string]string{
-						"originalname": name,
-					},
-				},
-			)
+			_, err = u.fileusecase.UploadFileFromReader(ctx, kbID, imgName, file, int64(f.UncompressedSize64))
 			if err != nil {
 				errCh <- fmt.Errorf("upload file failed: %v", err)
 				return

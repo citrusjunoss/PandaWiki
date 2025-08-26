@@ -2,37 +2,32 @@ package usecase
 
 import (
 	"context"
-	"errors"
-	"time"
 
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
+	"github.com/chaitin/panda-wiki/pkg/bot"
 	"github.com/chaitin/panda-wiki/pkg/bot/wechatservice"
+	"github.com/chaitin/panda-wiki/repo/pg"
 )
 
-func (u *AppUsecase) VerifyUrlWechatService(ctx context.Context, signature, timestamp, nonce, echoStr, kbID string) ([]byte, error) {
-	// 只有5秒
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+type WechatUsecase struct {
+	logger      *log.Logger
+	AppUsecase  *AppUsecase
+	chatUsecase *ChatUsecase
+	weRepo      *pg.WechatRepository
+}
 
-	appInfo, err := u.GetAppDetailByKBIDAndAppType(ctx, kbID, domain.AppTypeWechatServiceBot)
-	if err != nil {
-		u.logger.Error("find app detail failed", log.Error(err))
-		return nil, err
+func NewWechatUsecase(logger *log.Logger, AppUsecase *AppUsecase, chatUsecase *ChatUsecase, weRepo *pg.WechatRepository) *WechatUsecase {
+	return &WechatUsecase{
+		logger:      logger.WithModule("usecase.wechatUsecase"),
+		AppUsecase:  AppUsecase,
+		chatUsecase: chatUsecase,
+		weRepo:      weRepo,
 	}
-	if appInfo.Settings.WeChatServiceIsEnabled != nil && !*appInfo.Settings.WeChatServiceIsEnabled {
-		return nil, errors.New("wechat service bot is not enabled")
-	}
+}
 
-	u.logger.Debug("wechat Service info", log.Any("info", appInfo))
-
-	WechatServiceConf, err := u.NewWechatServiceConfig(ctx, appInfo, kbID)
-
-	if err != nil {
-		u.logger.Error("failed to create WechatServiceConfig", log.Error(err))
-		return nil, err
-	}
-
+func (u *WechatUsecase) VerifyUrlWechatService(ctx context.Context, signature, timestamp, nonce, echoStr string,
+	WechatServiceConf *wechatservice.WechatServiceConfig) ([]byte, error) {
 	body, err := WechatServiceConf.VerifyUrlWechatService(signature, timestamp, nonce, echoStr)
 	if err != nil {
 		u.logger.Error("WechatServiceConf verify url failed", log.Error(err))
@@ -41,11 +36,11 @@ func (u *AppUsecase) VerifyUrlWechatService(ctx context.Context, signature, time
 	return body, nil
 }
 
-func (u *AppUsecase) WechatService(ctx context.Context, msg *wechatservice.WeixinUserAskMsg, kbID string, WechatServiceConfig *wechatservice.WechatServiceConfig) error {
+func (u *WechatUsecase) WechatService(ctx context.Context, msg *wechatservice.WeixinUserAskMsg, kbID string, WechatServiceConfig *wechatservice.WechatServiceConfig) error {
 	getQA := u.getQAFunc(kbID, domain.AppTypeWechatServiceBot)
+	WechatServiceConfig.WeRepo = u.weRepo
 
 	err := WechatServiceConfig.Wechat(msg, getQA)
-
 	if err != nil {
 		u.logger.Error("WechatServiceConf wechat failed", log.Error(err))
 		return err
@@ -53,7 +48,7 @@ func (u *AppUsecase) WechatService(ctx context.Context, msg *wechatservice.Weixi
 	return nil
 }
 
-func (u *AppUsecase) NewWechatServiceConfig(ctx context.Context, appInfo *domain.AppDetailResp, kbID string) (*wechatservice.WechatServiceConfig, error) {
+func (u *WechatUsecase) NewWechatServiceConfig(ctx context.Context, appInfo *domain.AppDetailResp, kbID string) (*wechatservice.WechatServiceConfig, error) {
 	return wechatservice.NewWechatServiceConfig(
 		ctx,
 		appInfo.Settings.WeChatServiceCorpID,
@@ -63,4 +58,33 @@ func (u *AppUsecase) NewWechatServiceConfig(ctx context.Context, appInfo *domain
 		appInfo.Settings.WeChatServiceSecret,
 		u.logger,
 	)
+}
+
+func (u *WechatUsecase) getQAFunc(kbID string, appType domain.AppType) bot.GetQAFun {
+	return func(ctx context.Context, msg string, info domain.ConversationInfo, ConversationID string) (chan string, error) {
+		eventCh, err := u.chatUsecase.Chat(ctx, &domain.ChatRequest{
+			Message:        msg,
+			KBID:           kbID,
+			AppType:        appType,
+			RemoteIP:       "",
+			ConversationID: ConversationID,
+			Info:           info,
+		})
+		if err != nil {
+			return nil, err
+		}
+		contentCh := make(chan string, 10)
+		go func() {
+			defer close(contentCh)
+			for event := range eventCh {
+				if event.Type == "done" || event.Type == "error" {
+					break
+				}
+				if event.Type == "data" {
+					contentCh <- event.Content
+				}
+			}
+		}()
+		return contentCh, nil
+	}
 }

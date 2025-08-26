@@ -27,6 +27,7 @@ type ConversationMessage struct {
 	ID             string `json:"id" gorm:"primaryKey"`
 	ConversationID string `json:"conversation_id" gorm:"index"`
 	AppID          string `json:"app_id" gorm:"index"`
+	KBID           string `json:"kb_id"`
 
 	Role    schema.RoleType `json:"role"`
 	Content string          `json:"content"`
@@ -44,6 +45,9 @@ type ConversationMessage struct {
 
 	// feedbackinfo
 	Info FeedBackInfo `json:"info" gorm:"column:info;type:jsonb"`
+
+	// parent_id
+	ParentID string `json:"parent_id"`
 }
 
 type FeedBackInfo struct {
@@ -112,4 +116,42 @@ type ConversationDetailResp struct {
 	IPAddress *IPAddress `json:"ip_address" gorm:"-"`
 
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type MessageListReq struct {
+	KBID string `json:"kb_id" query:"kb_id" validate:"required"`
+	Pager
+}
+
+type ConversationMessageListItem struct {
+	ID             string  `json:"id"`
+	ConversationID string  `json:"conversation_id"`
+	AppID          string  `json:"app_id"`
+	AppType        AppType `json:"app_type"`
+
+	Question string `json:"question"`
+
+	// stats
+	RemoteIP  string    `json:"remote_ip"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// userInfo
+	ConversationInfo ConversationInfo `json:"conversation_info" gorm:"column:conversation_info;type:jsonb"`
+	// feedbackInfo
+	Info FeedBackInfo `json:"info" gorm:"column:info;type:jsonb"`
+
+	IPAddress *IPAddress `json:"ip_address" gorm:"-"`
+}
+
+type ShareConversationDetailResp struct {
+	ID        string                      `json:"id"`
+	Subject   string                      `json:"subject"`
+	Messages  []*ShareConversationMessage `json:"messages" gorm:"-"`
+	CreatedAt time.Time                   `json:"created_at"`
+}
+
+type ShareConversationMessage struct {
+	Role      schema.RoleType `json:"role"`
+	Content   string          `json:"content"`
+	CreatedAt time.Time       `json:"created_at"`
 }

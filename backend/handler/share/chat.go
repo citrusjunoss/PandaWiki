@@ -52,7 +52,7 @@ func NewShareChatHandler(
 				return next(c)
 			}
 		})
-	share.POST("/message", h.ChatMessage, h.BaseHandler.ShareAuthMiddleware.Authorize)
+	share.POST("/message", h.ChatMessage, h.ShareAuthMiddleware.Authorize)
 	share.POST("/widget", h.ChatWidget)
 	share.POST("/feedback", h.FeedBack)
 	return h
@@ -90,6 +90,14 @@ func (h *ShareChatHandler) ChatMessage(c echo.Context) error {
 	c.Response().Header().Set("Cache-Control", "no-cache")
 	c.Response().Header().Set("Connection", "keep-alive")
 	c.Response().Header().Set("Transfer-Encoding", "chunked")
+
+	// get user info --> no enterprise is nil
+	userID := c.Get("user_id")
+	h.logger.Debug("userid:", userID)
+	if userID != nil { // find userinfo from auth
+		userIDValue := userID.(uint)
+		req.Info.UserInfo.AuthUserID = userIDValue
+	}
 
 	eventCh, err := h.chatUsecase.Chat(c.Request().Context(), &req)
 	if err != nil {
@@ -197,16 +205,13 @@ func (h *ShareChatHandler) FeedBack(c echo.Context) error {
 	// 前端传入对应的conversationId和feedback内容，后端处理并返回反馈结果
 	var feedbackReq domain.FeedbackRequest
 	if err := c.Bind(&feedbackReq); err != nil {
-		h.logger.Error("bind feedback request failed", log.Error(err))
 		return h.NewResponseWithError(c, "bind feedback request failed", err)
 	}
 	if err := c.Validate(&feedbackReq); err != nil {
-		h.logger.Error("validate request failed", log.Error(err))
 		return h.NewResponseWithError(c, "validate request failed", err)
 	}
 	h.logger.Debug("receive feedback request:", log.Any("feedback_request", feedbackReq))
 	if err := h.conversationUsecase.FeedBack(c.Request().Context(), &feedbackReq); err != nil {
-		h.logger.Error("handle feedback failed", log.Error(err))
 		return h.NewResponseWithError(c, "handle feedback failed", err)
 	}
 	return h.NewResponseWithData(c, "success")

@@ -4,7 +4,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	v1 "github.com/chaitin/panda-wiki/api/user/v1"
 	"github.com/chaitin/panda-wiki/config"
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/handler"
 	"github.com/chaitin/panda-wiki/log"
@@ -31,11 +33,11 @@ func NewUserHandler(e *echo.Echo, baseHandler *handler.BaseHandler, logger *log.
 	group := e.Group("/api/v1/user")
 	group.POST("/login", h.Login)
 
-	group.POST("/create", h.CreateUser, h.auth.Authorize)
 	group.GET("", h.GetUserInfo, h.auth.Authorize)
 	group.GET("/list", h.ListUsers, h.auth.Authorize)
+	group.POST("/create", h.CreateUser, h.auth.Authorize, h.auth.ValidateUserRole(consts.UserRoleAdmin))
 	group.PUT("/reset_password", h.ResetPassword, h.auth.Authorize)
-	group.DELETE("/delete", h.DeleteUser, h.auth.Authorize)
+	group.DELETE("/delete", h.DeleteUser, h.auth.Authorize, h.auth.ValidateUserRole(consts.UserRoleAdmin))
 
 	return h
 }
@@ -47,11 +49,11 @@ func NewUserHandler(e *echo.Echo, baseHandler *handler.BaseHandler, logger *log.
 //	@Tags			user
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		domain.CreateUserReq true	"CreateUser Request"
+//	@Param			body	body		v1.CreateUserReq	true	"CreateUser Request"
 //	@Success		200		{object}	domain.Response
 //	@Router			/api/v1/user/create [post]
 func (h *UserHandler) CreateUser(c echo.Context) error {
-	var req domain.CreateUserReq
+	var req v1.CreateUserReq
 	if err := c.Bind(&req); err != nil {
 		return h.NewResponseWithError(c, "invalid request", err)
 	}
@@ -64,6 +66,7 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 		ID:       uuid.New().String(),
 		Account:  req.Account,
 		Password: req.Password,
+		Role:     req.Role,
 	})
 	if err != nil {
 		return h.NewResponseWithError(c, "failed to create user", err)
@@ -79,11 +82,11 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 //	@Tags			user
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		domain.LoginReq	true	"Login Request"
-//	@Success		200		{object}	domain.LoginResp
+//	@Param			body	body		v1.LoginReq	true	"Login Request"
+//	@Success		200		{object}	v1.LoginResp
 //	@Router			/api/v1/user/login [post]
 func (h *UserHandler) Login(c echo.Context) error {
-	var req domain.LoginReq
+	var req v1.LoginReq
 	if err := c.Bind(&req); err != nil {
 		return h.NewResponseWithError(c, "invalid request", err)
 	}
@@ -97,16 +100,16 @@ func (h *UserHandler) Login(c echo.Context) error {
 		return h.NewResponseWithError(c, "failed to login", err)
 	}
 
-	return h.NewResponseWithData(c, domain.LoginResp{Token: token})
+	return h.NewResponseWithData(c, v1.LoginResp{Token: token})
 }
 
-// GetUser
+// GetUserInfo
 //
 //	@Summary		GetUser
 //	@Description	GetUser
 //	@Tags			user
 //	@Accept			json
-//	@Success		200	{object}	domain.UserInfoResp
+//	@Success		200	{object}	v1.UserInfoResp
 //	@Router			/api/v1/user [get]
 func (h *UserHandler) GetUserInfo(c echo.Context) error {
 	userID, ok := h.auth.MustGetUserID(c)
@@ -119,7 +122,15 @@ func (h *UserHandler) GetUserInfo(c echo.Context) error {
 		return h.NewResponseWithError(c, "failed to get user", err)
 	}
 
-	return h.NewResponseWithData(c, user)
+	userInfo := &v1.UserInfoResp{
+		ID:         user.ID,
+		Account:    user.Account,
+		Role:       user.Role,
+		LastAccess: &user.LastAccess,
+		CreatedAt:  user.CreatedAt,
+	}
+
+	return h.NewResponseWithData(c, userInfo)
 }
 
 // ListUsers
@@ -129,9 +140,14 @@ func (h *UserHandler) GetUserInfo(c echo.Context) error {
 //	@Tags			user
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	domain.Response{data=[]domain.UserListItemResp}
+//	@Success		200	{object}	domain.PWResponse{data=v1.UserListResp}
 //	@Router			/api/v1/user/list [get]
 func (h *UserHandler) ListUsers(c echo.Context) error {
+	var req v1.UserListReq
+	if err := c.Bind(&req); err != nil {
+		return h.NewResponseWithError(c, "invalid request", err)
+	}
+
 	users, err := h.usecase.ListUsers(c.Request().Context())
 	if err != nil {
 		return h.NewResponseWithError(c, "failed to list users", err)
@@ -146,11 +162,11 @@ func (h *UserHandler) ListUsers(c echo.Context) error {
 //	@Tags			user
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		domain.ResetPasswordReq	true	"ResetPassword Request"
+//	@Param			body	body		v1.ResetPasswordReq	true	"ResetPassword Request"
 //	@Success		200		{object}	domain.Response
 //	@Router			/api/v1/user/reset_password [put]
 func (h *UserHandler) ResetPassword(c echo.Context) error {
-	var req domain.ResetPasswordReq
+	var req v1.ResetPasswordReq
 	if err := c.Bind(&req); err != nil {
 		return h.NewResponseWithError(c, "invalid request", err)
 	}
@@ -189,11 +205,11 @@ func (h *UserHandler) ResetPassword(c echo.Context) error {
 //	@Tags			user
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		domain.DeleteUserReq	true	"DeleteUser Request"
+//	@Param			body	body		v1.DeleteUserReq	true	"DeleteUser Request"
 //	@Success		200		{object}	domain.Response
 //	@Router			/api/v1/user/delete [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
-	var req domain.DeleteUserReq
+	var req v1.DeleteUserReq
 	if err := c.Bind(&req); err != nil {
 		return h.NewResponseWithError(c, "invalid request", err)
 	}
@@ -210,7 +226,7 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	if err != nil {
 		return h.NewResponseWithError(c, "failed to get user", err)
 	}
-	if user.Account != "admin" {
+	if user.Role != consts.UserRoleAdmin {
 		return h.NewResponseWithError(c, "只有管理员可以删除用户", nil)
 	}
 

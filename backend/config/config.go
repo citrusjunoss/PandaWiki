@@ -69,10 +69,9 @@ type JWTConfig struct {
 }
 
 type S3Config struct {
-	Endpoint    string `mapstructure:"endpoint"`
-	AccessKey   string `mapstructure:"access_key"`
-	SecretKey   string `mapstructure:"secret_key"`
-	MaxFileSize int64  `mapstructure:"max_file_size"`
+	Endpoint  string `mapstructure:"endpoint"`
+	AccessKey string `mapstructure:"access_key"`
+	SecretKey string `mapstructure:"secret_key"`
 }
 
 func NewConfig() (*Config, error) {
@@ -116,10 +115,9 @@ func NewConfig() (*Config, error) {
 			JWT:  JWTConfig{Secret: ""},
 		},
 		S3: S3Config{
-			Endpoint:    "panda-wiki-minio:9000",
-			AccessKey:   "s3panda-wiki",
-			SecretKey:   "",
-			MaxFileSize: 100 * 1024 * 1024, // 100MB
+			Endpoint:  "panda-wiki-minio:9000",
+			AccessKey: "s3panda-wiki",
+			SecretKey: "",
 		},
 		CaddyAPI:     "/app/run/caddy-admin.sock",
 		SubnetPrefix: "169.254.15",
@@ -171,6 +169,26 @@ func overrideWithEnv(c *Config) {
 	}
 	if env := os.Getenv("SUBNET_PREFIX"); env != "" {
 		c.SubnetPrefix = env
+	}
+	// pg
+	if env := os.Getenv("PG_DSN"); env != "" {
+		c.PG.DSN = env
+	}
+	// nats
+	if env := os.Getenv("MQ_NATS_SERVER"); env != "" {
+		c.MQ.NATS.Server = env
+	}
+	// rag
+	if env := os.Getenv("RAG_CT_RAG_BASE_URL"); env != "" {
+		c.RAG.CTRAG.BaseURL = env
+	}
+	// redis
+	if env := os.Getenv("REDIS_ADDR"); env != "" {
+		c.Redis.Addr = env
+	}
+	// s3
+	if env := os.Getenv("S3_ENDPOINT"); env != "" {
+		c.S3.Endpoint = env
 	}
 }
 

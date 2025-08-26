@@ -2,8 +2,14 @@
 import { createTheme } from '@mui/material';
 import { zhCN } from '@mui/material/locale';
 import { zhCN as CuiZhCN } from 'ct-mui/dist/local';
+declare module '@mui/material/styles' {
+  interface TypeBackground {
+    paper0?: string;
+    paper2?: string;
+  }
+}
 
-const lightTheme = createTheme(
+const lightThemeOptions = [
   {
     cssVariables: true,
     palette: {
@@ -31,8 +37,10 @@ const lightTheme = createTheme(
         contrastText: '#000',
       },
       background: {
-        default: '#fff',
-        paper: '#F8F9FA',
+        default: '#FFFFFF',
+        paper0: '#F1F2F8',
+        paper: '#FFFFFF',
+        paper2: '#F8F9FA',
       },
       text: {
         primary: '#21222D',
@@ -88,7 +96,7 @@ const lightTheme = createTheme(
               lineHeight: '36px',
               paddingLeft: '16px',
               paddingRight: '16px',
-              boxShadow: "none",
+              boxShadow: 'none',
               transition: 'all 0.2s ease-in-out',
               borderRadius: '10px',
               fontWeight: '400',
@@ -96,8 +104,7 @@ const lightTheme = createTheme(
                 color: 'var(--mui-palette-primary-contrastText)',
                 backgroundColor: 'var(--mui-palette-text-primary)',
               }),
-              ...(ownerState.variant === 'text' && {
-              }),
+              ...(ownerState.variant === 'text' && {}),
               ...(ownerState.variant === 'outlined' && {
                 color: 'var(--mui-palette-text-primary)',
                 border: `1px solid var(--mui-palette-text-primary)`,
@@ -109,7 +116,7 @@ const lightTheme = createTheme(
                 height: '32px',
                 lineHeight: '32px',
               }),
-              "&:hover": {
+              '&:hover': {
                 boxShadow: 'none',
                 ...(ownerState.variant === 'text' && {
                   backgroundColor: 'var(--mui-palette-background-paper2)',
@@ -122,8 +129,8 @@ const lightTheme = createTheme(
             marginRight: 8,
             '>*:nth-of-type(1)': {
               fontSize: 14,
-            }
-          }
+            },
+          },
         },
       },
       MuiLink: {
@@ -161,7 +168,7 @@ const lightTheme = createTheme(
             },
             '&:before': {
               display: 'none',
-            }
+            },
           },
           content: {
             margin: 0,
@@ -170,7 +177,7 @@ const lightTheme = createTheme(
             '&.Mui-expanded': {
               margin: 0,
             },
-          }
+          },
         },
       },
       MuiAccordionDetails: {
@@ -180,16 +187,16 @@ const lightTheme = createTheme(
             borderColor: 'var(--mui-palette-divider)',
             padding: 0,
             paddingTop: '24px',
-          }
-        }
-      }
+          },
+        },
+      },
     },
   },
   zhCN,
-  CuiZhCN
-);
+  CuiZhCN,
+];
 
-const darkTheme = createTheme(
+const darkThemeOptions = [
   {
     cssVariables: true,
     breakpoints: {
@@ -228,7 +235,9 @@ const darkTheme = createTheme(
       },
       background: {
         default: '#141923',
-        paper: '#202531',
+        paper0: '#141923',
+        paper: '#141923',
+        paper2: '#202531',
       },
       text: {
         primary: '#FFFFFF',
@@ -337,7 +346,7 @@ const darkTheme = createTheme(
             },
             '&:before': {
               display: 'none',
-            }
+            },
           },
           content: {
             margin: 0,
@@ -346,7 +355,7 @@ const darkTheme = createTheme(
             '&.Mui-expanded': {
               margin: 0,
             },
-          }
+          },
         },
       },
       MuiAccordionDetails: {
@@ -356,14 +365,46 @@ const darkTheme = createTheme(
             borderColor: 'var(--mui-palette-divider)',
             padding: 0,
             paddingTop: '24px',
-          }
-        }
-      }
+          },
+        },
+      },
     },
   },
   zhCN,
-  CuiZhCN
+  CuiZhCN,
+];
+
+const lightTheme = createTheme(...(lightThemeOptions as any));
+
+const darkTheme = createTheme(...(darkThemeOptions as any));
+
+const lightThemeWidget = createTheme(
+  // @ts-ignore
+  {
+    ...lightThemeOptions[0],
+    cssVariables: {
+      cssVarPrefix: 'widget',
+    },
+  },
+  ...lightThemeOptions.slice(1),
 );
 
-export { darkTheme, lightTheme };
+const darkThemeWidget = createTheme(
+  // @ts-ignore
+  {
+    ...darkThemeOptions[0],
+    cssVariables: {
+      cssVarPrefix: 'widget',
+    },
+  },
+  ...darkThemeOptions.slice(1),
+);
 
+export {
+  darkTheme,
+  lightTheme,
+  darkThemeOptions,
+  lightThemeOptions,
+  lightThemeWidget,
+  darkThemeWidget,
+};

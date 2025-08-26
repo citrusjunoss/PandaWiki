@@ -58,40 +58,6 @@
 .widget-bot-text span {
   display: block;
   margin: 1px 0;
-  animation: fadeInUp 0.3s ease forwards;
-  opacity: 0;
-}
-
-.widget-bot-text span:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-.widget-bot-text span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.widget-bot-text span:nth-child(3) {
-  animation-delay: 0.2s;
-}
-
-.widget-bot-text span:nth-child(4) {
-  animation-delay: 0.25s;
-}
-
-.widget-bot-text span:nth-child(5) {
-  animation-delay: 0.3s;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* 模态框样式 - 基于MUI主题 */

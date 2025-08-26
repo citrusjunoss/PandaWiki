@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/mq"
@@ -47,6 +48,19 @@ func (h *RAGMQHandler) HandleNodeContentVectorRequest(ctx context.Context, msg t
 		return nil
 	}
 	switch request.Action {
+	case "update_group_ids":
+		h.logger.Info("update node group request", log.Any("request", request), log.Any("group_id", request.GroupIds))
+		kb, err := h.kbRepo.GetKnowledgeBaseByID(ctx, request.KBID)
+		if err != nil {
+			h.logger.Error("get kb failed", log.Error(err))
+			return nil
+		}
+		if err := h.rag.UpdateDocumentGroupIDs(ctx, kb.DatasetID, request.DocID, request.GroupIds); err != nil {
+			h.logger.Error("update node group failed", log.Error(err))
+			return nil
+		}
+		h.logger.Info("update node group success", log.Any("doc_id", request.DocID), log.Any("group_ids", request.GroupIds))
+
 	case "upsert":
 		h.logger.Debug("upsert node content vector request", "request", request)
 		nodeRelease, err := h.nodeRepo.GetNodeReleaseByID(ctx, request.NodeReleaseID)
@@ -59,8 +73,15 @@ func (h *RAGMQHandler) HandleNodeContentVectorRequest(ctx context.Context, msg t
 			h.logger.Error("get kb failed", log.Error(err), log.String("kb_id", request.KBID))
 			return nil
 		}
+
+		groupIds, err := h.nodeRepo.GetNodeAuthGroupIdsByNodeId(ctx, nodeRelease.NodeID, consts.NodePermNameAnswerable)
+		if err != nil {
+			h.logger.Error("get groupIds failed", log.Error(err), log.String("kb_id", request.KBID))
+			return nil
+		}
+
 		// upsert node content chunks
-		docID, err := h.rag.UpsertRecords(ctx, kb.DatasetID, nodeRelease)
+		docID, err := h.rag.UpsertRecords(ctx, kb.DatasetID, nodeRelease, groupIds)
 		if err != nil {
 			h.logger.Error("upsert node content vector failed", log.Error(err))
 			return nil

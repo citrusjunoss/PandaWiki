@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/api/v1/app": {
             "put": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Update app",
                 "consumes": [
                     "application/json"
@@ -29,6 +34,13 @@ const docTemplate = `{
                 ],
                 "summary": "Update app",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
                     {
                         "description": "app",
                         "name": "app",
@@ -49,6 +61,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Delete app",
                 "consumes": [
                     "application/json"
@@ -78,6 +95,11 @@ const docTemplate = `{
         },
         "/api/v1/app/detail": {
             "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Get app detail",
                 "consumes": [
                     "application/json"
@@ -111,7 +133,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -122,6 +144,113 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/comment": {
+            "get": {
+                "description": "GetCommentModeratedList",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comment"
+                ],
+                "summary": "GetCommentModeratedList",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "kb_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            -1,
+                            0,
+                            1
+                        ],
+                        "type": "integer",
+                        "format": "int32",
+                        "x-enum-varnames": [
+                            "CommentStatusReject",
+                            "CommentStatusPending",
+                            "CommentStatusAccepted"
+                        ],
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "conversationList",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/v1.CommentLists"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/comment/list": {
+            "delete": {
+                "description": "DeleteCommentList",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comment"
+                ],
+                "summary": "DeleteCommentList",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "name": "ids",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "total",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
                         }
                     }
                 }
@@ -183,13 +312,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/handler_v1.ConversationListItems"
+                                            "$ref": "#/definitions/v1.ConversationListItems"
                                         }
                                     }
                                 }
@@ -215,15 +344,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "user id",
-                        "name": "X-SafePoint-User-ID",
-                        "in": "header",
+                        "name": "id",
+                        "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "conversation id",
-                        "name": "id",
+                        "name": "kb_id",
                         "in": "query",
                         "required": true
                     }
@@ -234,13 +361,119 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/domain.ConversationDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/conversation/message/detail": {
+            "get": {
+                "description": "Get message detail",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Message"
+                ],
+                "summary": "Get message detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "kb_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ConversationMessage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/conversation/message/list": {
+            "get": {
+                "description": "GetMessageFeedBackList",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Message"
+                ],
+                "summary": "GetMessageFeedBackList",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "kb_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "MessageList",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.PaginatedResult-array_domain_ConversationMessageListItem"
                                         }
                                     }
                                 }
@@ -285,7 +518,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -339,7 +572,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -385,7 +618,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -434,7 +667,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -483,7 +716,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -532,7 +765,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -581,7 +814,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -630,7 +863,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -679,7 +912,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -725,7 +958,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -771,13 +1004,67 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/domain.ScrapeResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/crawler/siyuan/analysis_export_file": {
+            "post": {
+                "description": "Analyze SiYuan Export File",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "crawler"
+                ],
+                "summary": "AnalysisSiyuanExportFile",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "kb_id",
+                        "name": "kb_id",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.SiYuanResp"
+                                            }
                                         }
                                     }
                                 }
@@ -822,7 +1109,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -831,6 +1118,60 @@ const docTemplate = `{
                                             "type": "array",
                                             "items": {
                                                 "$ref": "#/definitions/domain.WikiJSResp"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/crawler/yuque/analysis_export_file": {
+            "post": {
+                "description": "Analyze Yuque Export File",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "crawler"
+                ],
+                "summary": "AnalysisYuqueExportFile",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "kb_id",
+                        "name": "kb_id",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.YuqueResp"
                                             }
                                         }
                                     }
@@ -946,6 +1287,11 @@ const docTemplate = `{
         },
         "/api/v1/knowledge_base/detail": {
             "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "GetKnowledgeBaseDetail",
                 "consumes": [
                     "application/json"
@@ -972,7 +1318,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1069,7 +1415,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1150,7 +1496,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1161,6 +1507,178 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/knowledge_base/user/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Remove user from knowledge base",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge_base"
+                ],
+                "summary": "KBUserDelete",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "kb_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/knowledge_base/user/invite": {
+            "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Invite user to knowledge base",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge_base"
+                ],
+                "summary": "KBUserInvite",
+                "parameters": [
+                    {
+                        "description": "Invite User Request",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.KBUserInviteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/knowledge_base/user/list": {
+            "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "KBUserList",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge_base"
+                ],
+                "summary": "KBUserList",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Knowledge Base ID",
+                        "name": "kb_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/v1.KBUserListItemResp"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/knowledge_base/user/update": {
+            "patch": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "Update user permission in knowledge base",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge_base"
+                ],
+                "summary": "KBUserUpdate",
+                "parameters": [
+                    {
+                        "description": "Update User Permission Request",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.KBUserUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
                         }
                     }
                 }
@@ -1251,7 +1769,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.CheckModelReq"
+                            "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.CheckModelReq"
                         }
                     }
                 ],
@@ -1267,7 +1785,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/domain.CheckModelResp"
+                                            "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.CheckModelResp"
                                         }
                                     }
                                 }
@@ -1340,13 +1858,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/domain.ModelListItem"
+                                            "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.ModelListItem"
                                         }
                                     }
                                 }
@@ -1357,7 +1875,7 @@ const docTemplate = `{
             }
         },
         "/api/v1/model/provider/supported": {
-            "get": {
+            "post": {
                 "description": "get provider supported model list",
                 "consumes": [
                     "application/json"
@@ -1371,54 +1889,13 @@ const docTemplate = `{
                 "summary": "get provider supported model list",
                 "parameters": [
                     {
-                        "type": "string",
-                        "name": "api_header",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "api_key",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "name": "base_url",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "enum": [
-                            "SiliconFlow",
-                            "OpenAI",
-                            "Ollama",
-                            "DeepSeek",
-                            "Moonshot",
-                            "AzureOpenAI",
-                            "BaiZhiCloud",
-                            "Hunyuan",
-                            "BaiLian",
-                            "Volcengine"
-                        ],
-                        "type": "string",
-                        "name": "provider",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "enum": [
-                            "chat",
-                            "embedding",
-                            "rerank"
-                        ],
-                        "type": "string",
-                        "x-enum-varnames": [
-                            "ModelTypeChat",
-                            "ModelTypeEmbedding",
-                            "ModelTypeRerank"
-                        ],
-                        "name": "type",
-                        "in": "query",
-                        "required": true
+                        "description": "get supported model list request",
+                        "name": "params",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.GetProviderModelListReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -1427,7 +1904,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1445,6 +1922,11 @@ const docTemplate = `{
         },
         "/api/v1/node": {
             "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Create Node",
                 "consumes": [
                     "application/json"
@@ -1473,7 +1955,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1494,6 +1976,11 @@ const docTemplate = `{
         },
         "/api/v1/node/action": {
             "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Node Action",
                 "consumes": [
                     "application/json"
@@ -1522,7 +2009,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1543,6 +2030,11 @@ const docTemplate = `{
         },
         "/api/v1/node/batch_move": {
             "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Batch Move Node",
                 "consumes": [
                     "application/json"
@@ -1577,6 +2069,11 @@ const docTemplate = `{
         },
         "/api/v1/node/detail": {
             "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Get Node Detail",
                 "consumes": [
                     "application/json"
@@ -1591,8 +2088,18 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID",
+                        "name": "format",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "kb_id",
                         "in": "query",
                         "required": true
                     }
@@ -1603,13 +2110,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/domain.NodeDetailResp"
+                                            "$ref": "#/definitions/v1.NodeDetailResp"
                                         }
                                     }
                                 }
@@ -1619,6 +2126,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Update Node Detail",
                 "consumes": [
                     "application/json"
@@ -1653,6 +2165,11 @@ const docTemplate = `{
         },
         "/api/v1/node/list": {
             "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Get Node List",
                 "consumes": [
                     "application/json"
@@ -1683,7 +2200,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1704,6 +2221,11 @@ const docTemplate = `{
         },
         "/api/v1/node/move": {
             "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Move Node",
                 "consumes": [
                     "application/json"
@@ -1736,8 +2258,120 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/node/permission": {
+            "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "文档授权信息获取",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "NodePermission"
+                ],
+                "summary": "文档授权信息获取",
+                "operationId": "v1-NodePermission",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "kb_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/v1.NodePermissionResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/node/permission/edit": {
+            "patch": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "description": "文档授权信息更新",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "NodePermission"
+                ],
+                "summary": "文档授权信息更新",
+                "operationId": "v1-NodePermissionEdit",
+                "parameters": [
+                    {
+                        "description": "para",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.NodePermissionEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/v1.NodePermissionEditResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/node/recommend_nodes": {
             "get": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Recommend Nodes",
                 "consumes": [
                     "application/json"
@@ -1773,7 +2407,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1794,6 +2428,11 @@ const docTemplate = `{
         },
         "/api/v1/node/summary": {
             "post": {
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
                 "description": "Summary Node",
                 "consumes": [
                     "application/json"
@@ -2096,7 +2735,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.UserInfoResp"
+                            "$ref": "#/definitions/v1.UserInfoResp"
                         }
                     }
                 }
@@ -2122,7 +2761,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.CreateUserReq"
+                            "$ref": "#/definitions/v1.CreateUserReq"
                         }
                     }
                 ],
@@ -2156,7 +2795,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.DeleteUserReq"
+                            "$ref": "#/definitions/v1.DeleteUserReq"
                         }
                     }
                 ],
@@ -2189,16 +2828,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/domain.Response"
+                                    "$ref": "#/definitions/domain.PWResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/domain.UserListItemResp"
-                                            }
+                                            "$ref": "#/definitions/v1.UserListResp"
                                         }
                                     }
                                 }
@@ -2228,7 +2864,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.LoginReq"
+                            "$ref": "#/definitions/v1.LoginReq"
                         }
                     }
                 ],
@@ -2236,7 +2872,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.LoginResp"
+                            "$ref": "#/definitions/v1.LoginResp"
                         }
                     }
                 }
@@ -2262,7 +2898,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.ResetPasswordReq"
+                            "$ref": "#/definitions/v1.ResetPasswordReq"
                         }
                     }
                 ],
@@ -2308,6 +2944,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/share/v1/app/wechat/service/answer": {
+            "get": {
+                "description": "GetWechatAnswer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Wechat"
+                ],
+                "summary": "GetWechatAnswer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "conversation id",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/share/v1/app/widget/info": {
             "get": {
                 "description": "GetWidgetAppInfo",
@@ -2328,6 +2996,93 @@ const docTemplate = `{
                         "name": "X-KB-ID",
                         "in": "header",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/share/v1/auth/get": {
+            "get": {
+                "description": "AuthGet",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share_auth"
+                ],
+                "summary": "AuthGet",
+                "operationId": "v1-AuthGet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "kb_id",
+                        "name": "X-KB-ID",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/v1.AuthGetResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/share/v1/auth/login/simple": {
+            "post": {
+                "description": "AuthLoginSimple",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share_auth"
+                ],
+                "summary": "AuthLoginSimple",
+                "operationId": "v1-AuthLoginSimple",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "kb_id",
+                        "name": "X-KB-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "para",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AuthLoginSimpleReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -2456,6 +3211,147 @@ const docTemplate = `{
                 }
             }
         },
+        "/share/v1/comment": {
+            "post": {
+                "description": "CreateComment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share_comment"
+                ],
+                "summary": "CreateComment",
+                "parameters": [
+                    {
+                        "description": "Comment",
+                        "name": "comment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CommentID",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/share/v1/comment/list": {
+            "get": {
+                "description": "GetCommentList",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share_comment"
+                ],
+                "summary": "GetCommentList",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "nodeID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CommentList",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/share.ShareCommentLists"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/share/v1/conversation/detail": {
+            "get": {
+                "description": "GetConversationDetail",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share_conversation"
+                ],
+                "summary": "GetConversationDetail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "kb id",
+                        "name": "X-KB-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "conversation id",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.PWResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ShareConversationDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/share/v1/node/detail": {
             "get": {
                 "description": "GetNodeDetail",
@@ -2481,6 +3377,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "node id",
                         "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "format",
+                        "name": "format",
                         "in": "query",
                         "required": true
                     }
@@ -2563,17 +3466,174 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "consts.AuthType": {
+            "type": "string",
+            "enum": [
+                "",
+                "simple",
+                "enterprise"
+            ],
+            "x-enum-comments": {
+                "AuthTypeEnterprise": "企业认证",
+                "AuthTypeNull": "无认证",
+                "AuthTypeSimple": "简单口令"
+            },
+            "x-enum-descriptions": [
+                "无认证",
+                "简单口令",
+                "企业认证"
+            ],
+            "x-enum-varnames": [
+                "AuthTypeNull",
+                "AuthTypeSimple",
+                "AuthTypeEnterprise"
+            ]
+        },
+        "consts.NodeAccessPerm": {
+            "type": "string",
+            "enum": [
+                "open",
+                "partial",
+                "closed"
+            ],
+            "x-enum-comments": {
+                "NodeAccessPermClosed": "完全禁止",
+                "NodeAccessPermOpen": "完全开放",
+                "NodeAccessPermPartial": "部分开放"
+            },
+            "x-enum-descriptions": [
+                "完全开放",
+                "部分开放",
+                "完全禁止"
+            ],
+            "x-enum-varnames": [
+                "NodeAccessPermOpen",
+                "NodeAccessPermPartial",
+                "NodeAccessPermClosed"
+            ]
+        },
+        "consts.NodePermName": {
+            "type": "string",
+            "enum": [
+                "visible",
+                "visitable",
+                "answerable"
+            ],
+            "x-enum-comments": {
+                "NodePermNameAnswerable": "可被问答",
+                "NodePermNameVisible": "导航内可见",
+                "NodePermNameVisitable": "可被访问"
+            },
+            "x-enum-descriptions": [
+                "导航内可见",
+                "可被访问",
+                "可被问答"
+            ],
+            "x-enum-varnames": [
+                "NodePermNameVisible",
+                "NodePermNameVisitable",
+                "NodePermNameAnswerable"
+            ]
+        },
+        "consts.SourceType": {
+            "type": "string",
+            "enum": [
+                "dingtalk",
+                "feishu",
+                "wecom",
+                "oauth",
+                "github",
+                "cas",
+                "ldap"
+            ],
+            "x-enum-varnames": [
+                "SourceTypeDingTalk",
+                "SourceTypeFeishu",
+                "SourceTypeWeCom",
+                "SourceTypeOAuth",
+                "SourceTypeGitHub",
+                "SourceTypeCAS",
+                "SourceTypeLDAP"
+            ]
+        },
+        "consts.UserKBPermission": {
+            "type": "string",
+            "enum": [
+                "",
+                "full_control",
+                "doc_manage",
+                "data_operate"
+            ],
+            "x-enum-comments": {
+                "UserKBPermissionDataOperate": "数据运营",
+                "UserKBPermissionDocManage": "文档管理",
+                "UserKBPermissionFullControl": "完全控制",
+                "UserKBPermissionNull": "无权限"
+            },
+            "x-enum-descriptions": [
+                "无权限",
+                "完全控制",
+                "文档管理",
+                "数据运营"
+            ],
+            "x-enum-varnames": [
+                "UserKBPermissionNull",
+                "UserKBPermissionFullControl",
+                "UserKBPermissionDocManage",
+                "UserKBPermissionDataOperate"
+            ]
+        },
+        "consts.UserRole": {
+            "type": "string",
+            "enum": [
+                "admin",
+                "user"
+            ],
+            "x-enum-comments": {
+                "UserRoleAdmin": "管理员",
+                "UserRoleUser": "普通用户"
+            },
+            "x-enum-descriptions": [
+                "管理员",
+                "普通用户"
+            ],
+            "x-enum-varnames": [
+                "UserRoleAdmin",
+                "UserRoleUser"
+            ]
+        },
+        "domain.AIFeedbackSettings": {
+            "type": "object",
+            "properties": {
+                "ai_feedback_type": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "domain.AccessSettings": {
             "type": "object",
             "properties": {
                 "base_url": {
                     "type": "string"
                 },
+                "enterprise_auth": {
+                    "$ref": "#/definitions/domain.EnterpriseAuth"
+                },
                 "hosts": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "is_forbidden": {
+                    "description": "禁止访问",
+                    "type": "boolean"
                 },
                 "ports": {
                     "type": "array",
@@ -2589,6 +3649,14 @@ const docTemplate = `{
                 },
                 "simple_auth": {
                     "$ref": "#/definitions/domain.SimpleAuth"
+                },
+                "source_type": {
+                    "description": "企业认证来源",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.SourceType"
+                        }
+                    ]
                 },
                 "ssl_ports": {
                     "type": "array",
@@ -2647,6 +3715,14 @@ const docTemplate = `{
         "domain.AppSettings": {
             "type": "object",
             "properties": {
+                "ai_feedback_settings": {
+                    "description": "AI feedback",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.AIFeedbackSettings"
+                        }
+                    ]
+                },
                 "auto_sitemap": {
                     "type": "boolean"
                 },
@@ -2688,6 +3764,10 @@ const docTemplate = `{
                 },
                 "discord_bot_token": {
                     "type": "string"
+                },
+                "document_feedback_is_enabled": {
+                    "description": "document feedback",
+                    "type": "boolean"
                 },
                 "feishu_bot_app_id": {
                     "type": "string"
@@ -2743,6 +3823,28 @@ const docTemplate = `{
                     "description": "nav",
                     "type": "string"
                 },
+                "watermark_content": {
+                    "type": "string"
+                },
+                "watermark_enable": {
+                    "type": "boolean"
+                },
+                "web_app_comment_settings": {
+                    "description": "webapp comment settings",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.WebAppCommentSettings"
+                        }
+                    ]
+                },
+                "web_app_custom_style": {
+                    "description": "WebAppCustomStyle",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.WebAppCustomSettings"
+                        }
+                    ]
+                },
                 "wechat_app_agent_id": {
                     "type": "string"
                 },
@@ -2760,6 +3862,22 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "wechat_app_token": {
+                    "type": "string"
+                },
+                "wechat_official_account_app_id": {
+                    "type": "string"
+                },
+                "wechat_official_account_app_secret": {
+                    "type": "string"
+                },
+                "wechat_official_account_encodingaeskey": {
+                    "type": "string"
+                },
+                "wechat_official_account_is_enabled": {
+                    "description": "WechatOfficialAccount",
+                    "type": "boolean"
+                },
+                "wechat_official_account_token": {
                     "type": "string"
                 },
                 "wechat_service_corpid": {
@@ -2795,6 +3913,14 @@ const docTemplate = `{
         "domain.AppSettingsResp": {
             "type": "object",
             "properties": {
+                "ai_feedback_settings": {
+                    "description": "AI feedback",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.AIFeedbackSettings"
+                        }
+                    ]
+                },
                 "auto_sitemap": {
                     "type": "boolean"
                 },
@@ -2836,6 +3962,10 @@ const docTemplate = `{
                 },
                 "discord_bot_token": {
                     "type": "string"
+                },
+                "document_feedback_is_enabled": {
+                    "description": "document feedback",
+                    "type": "boolean"
                 },
                 "feishu_bot_app_id": {
                     "type": "string"
@@ -2891,6 +4021,28 @@ const docTemplate = `{
                     "description": "nav",
                     "type": "string"
                 },
+                "watermark_content": {
+                    "type": "string"
+                },
+                "watermark_enable": {
+                    "type": "boolean"
+                },
+                "web_app_comment_settings": {
+                    "description": "webapp comment settings",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.WebAppCommentSettings"
+                        }
+                    ]
+                },
+                "web_app_custom_style": {
+                    "description": "WebAppCustomStyle",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.WebAppCustomSettings"
+                        }
+                    ]
+                },
                 "wechat_app_agent_id": {
                     "type": "string"
                 },
@@ -2908,6 +4060,22 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "wechat_app_token": {
+                    "type": "string"
+                },
+                "wechat_official_account_app_id": {
+                    "type": "string"
+                },
+                "wechat_official_account_app_secret": {
+                    "type": "string"
+                },
+                "wechat_official_account_encodingaeskey": {
+                    "type": "string"
+                },
+                "wechat_official_account_is_enabled": {
+                    "description": "WechatOfficialAccount",
+                    "type": "boolean"
+                },
+                "wechat_official_account_token": {
                     "type": "string"
                 },
                 "wechat_service_corpid": {
@@ -2942,6 +4110,7 @@ const docTemplate = `{
         },
         "domain.AppType": {
             "type": "integer",
+            "format": "int32",
             "enum": [
                 1,
                 2,
@@ -2949,7 +4118,8 @@ const docTemplate = `{
                 4,
                 5,
                 6,
-                7
+                7,
+                8
             ],
             "x-enum-varnames": [
                 "AppTypeWeb",
@@ -2958,7 +4128,8 @@ const docTemplate = `{
                 "AppTypeFeishuBot",
                 "AppTypeWechatBot",
                 "AppTypeWechatServiceBot",
-                "AppTypeDisCordBot"
+                "AppTypeDisCordBot",
+                "AppTypeWechatOfficialAccount"
             ]
         },
         "domain.BatchMoveReq": {
@@ -3042,75 +4213,110 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.CheckModelReq": {
+        "domain.CommentInfo": {
             "type": "object",
-            "required": [
-                "base_url",
-                "model",
-                "provider",
-                "type"
-            ],
             "properties": {
-                "api_header": {
+                "auth_user_id": {
+                    "type": "integer"
+                },
+                "avatar": {
+                    "description": "avatar",
                     "type": "string"
                 },
-                "api_key": {
+                "email": {
                     "type": "string"
                 },
-                "api_version": {
-                    "description": "for azure openai",
+                "remote_ip": {
                     "type": "string"
                 },
-                "base_url": {
+                "user_name": {
                     "type": "string"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "provider": {
-                    "enum": [
-                        "OpenAI",
-                        "Ollama",
-                        "DeepSeek",
-                        "SiliconFlow",
-                        "Moonshot",
-                        "Other",
-                        "AzureOpenAI",
-                        "BaiZhiCloud",
-                        "Hunyuan",
-                        "BaiLian",
-                        "Volcengine"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.ModelProvider"
-                        }
-                    ]
-                },
-                "type": {
-                    "enum": [
-                        "chat",
-                        "embedding",
-                        "rerank"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.ModelType"
-                        }
-                    ]
                 }
             }
         },
-        "domain.CheckModelResp": {
+        "domain.CommentListItem": {
             "type": "object",
             "properties": {
                 "content": {
                     "type": "string"
                 },
-                "error": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "info": {
+                    "$ref": "#/definitions/domain.CommentInfo"
+                },
+                "ip_address": {
+                    "description": "ip地址",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.IPAddress"
+                        }
+                    ]
+                },
+                "node_id": {
+                    "type": "string"
+                },
+                "node_name": {
+                    "description": "文档标题",
+                    "type": "string"
+                },
+                "node_type": {
+                    "type": "integer"
+                },
+                "root_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "status : -1 reject 0 pending 1 accept",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.CommentStatus"
+                        }
+                    ]
+                }
+            }
+        },
+        "domain.CommentReq": {
+            "type": "object",
+            "required": [
+                "content",
+                "node_id"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "node_id": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "root_id": {
+                    "type": "string"
+                },
+                "user_name": {
                     "type": "string"
                 }
             }
+        },
+        "domain.CommentStatus": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                -1,
+                0,
+                1
+            ],
+            "x-enum-varnames": [
+                "CommentStatusReject",
+                "CommentStatusPending",
+                "CommentStatusAccepted"
+            ]
         },
         "domain.ConversationDetailResp": {
             "type": "object",
@@ -3226,7 +4432,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "kb_id": {
+                    "type": "string"
+                },
                 "model": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "description": "parent_id",
                     "type": "string"
                 },
                 "prompt_tokens": {
@@ -3236,7 +4449,7 @@ const docTemplate = `{
                     "description": "model",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/domain.ModelProvider"
+                            "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider"
                         }
                     ]
                 },
@@ -3249,6 +4462,52 @@ const docTemplate = `{
                 },
                 "total_tokens": {
                     "type": "integer"
+                }
+            }
+        },
+        "domain.ConversationMessageListItem": {
+            "type": "object",
+            "properties": {
+                "app_id": {
+                    "type": "string"
+                },
+                "app_type": {
+                    "$ref": "#/definitions/domain.AppType"
+                },
+                "conversation_id": {
+                    "type": "string"
+                },
+                "conversation_info": {
+                    "description": "userInfo",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ConversationInfo"
+                        }
+                    ]
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "info": {
+                    "description": "feedbackInfo",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.FeedBackInfo"
+                        }
+                    ]
+                },
+                "ip_address": {
+                    "$ref": "#/definitions/domain.IPAddress"
+                },
+                "question": {
+                    "type": "string"
+                },
+                "remote_ip": {
+                    "description": "stats",
+                    "type": "string"
                 }
             }
         },
@@ -3358,25 +4617,11 @@ const docTemplate = `{
                 "model": {
                     "type": "string"
                 },
+                "param": {
+                    "$ref": "#/definitions/domain.ModelParam"
+                },
                 "provider": {
-                    "enum": [
-                        "OpenAI",
-                        "Ollama",
-                        "DeepSeek",
-                        "SiliconFlow",
-                        "Moonshot",
-                        "Other",
-                        "AzureOpenAI",
-                        "BaiZhiCloud",
-                        "Hunyuan",
-                        "BaiLian",
-                        "Volcengine"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.ModelProvider"
-                        }
-                    ]
+                    "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider"
                 },
                 "type": {
                     "enum": [
@@ -3415,6 +4660,9 @@ const docTemplate = `{
                 "parent_id": {
                     "type": "string"
                 },
+                "position": {
+                    "type": "number"
+                },
                 "type": {
                     "enum": [
                         1,
@@ -3425,36 +4673,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/domain.NodeType"
                         }
                     ]
-                },
-                "visibility": {
-                    "$ref": "#/definitions/domain.NodeVisibility"
                 }
             }
         },
-        "domain.CreateUserReq": {
+        "domain.EnterpriseAuth": {
             "type": "object",
-            "required": [
-                "account",
-                "password"
-            ],
             "properties": {
-                "account": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 8
-                }
-            }
-        },
-        "domain.DeleteUserReq": {
-            "type": "object",
-            "required": [
-                "user_id"
-            ],
-            "properties": {
-                "user_id": {
-                    "type": "string"
+                "enabled": {
+                    "type": "boolean"
                 }
             }
         },
@@ -3476,7 +4702,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "feedback_type": {
-                    "$ref": "#/definitions/domain.FeedbackType"
+                    "type": "string"
                 },
                 "score": {
                     "$ref": "#/definitions/domain.ScoreType"
@@ -3486,7 +4712,6 @@ const docTemplate = `{
         "domain.FeedbackRequest": {
             "type": "object",
             "required": [
-                "conversation_id",
                 "message_id"
             ],
             "properties": {
@@ -3510,27 +4735,10 @@ const docTemplate = `{
                     ]
                 },
                 "type": {
-                    "description": "1 内容不准确，2 没有帮助，3 其他",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.FeedbackType"
-                        }
-                    ]
+                    "description": "内容不准确，没有帮助，.......",
+                    "type": "string"
                 }
             }
-        },
-        "domain.FeedbackType": {
-            "type": "integer",
-            "enum": [
-                1,
-                2,
-                3
-            ],
-            "x-enum-varnames": [
-                "ContentErr",
-                "NoHelp",
-                "Other"
-            ]
         },
         "domain.FooterSettings": {
             "type": "object",
@@ -3633,6 +4841,40 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.GetProviderModelListReq": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "provider",
+                "type"
+            ],
+            "properties": {
+                "api_header": {
+                    "type": "string"
+                },
+                "api_key": {
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "chat",
+                        "embedding",
+                        "rerank"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ModelType"
+                        }
+                    ]
+                }
+            }
+        },
         "domain.GetProviderModelListResp": {
             "type": "object",
             "properties": {
@@ -3724,6 +4966,14 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "perm": {
+                    "description": "用户对知识库的权限",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.UserKBPermission"
+                        }
+                    ]
+                },
                 "updated_at": {
                     "type": "string"
                 }
@@ -3759,29 +5009,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "url": {
-                    "type": "string"
-                }
-            }
-        },
-        "domain.LoginReq": {
-            "type": "object",
-            "required": [
-                "account",
-                "password"
-            ],
-            "properties": {
-                "account": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "domain.LoginResp": {
-            "type": "object",
-            "properties": {
-                "token": {
                     "type": "string"
                 }
             }
@@ -3825,11 +5052,14 @@ const docTemplate = `{
                 "model": {
                     "type": "string"
                 },
+                "parameters": {
+                    "$ref": "#/definitions/domain.ModelParam"
+                },
                 "prompt_tokens": {
                     "type": "integer"
                 },
                 "provider": {
-                    "$ref": "#/definitions/domain.ModelProvider"
+                    "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider"
                 },
                 "total_tokens": {
                     "type": "integer"
@@ -3842,73 +5072,28 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.ModelListItem": {
+        "domain.ModelParam": {
             "type": "object",
             "properties": {
-                "api_header": {
-                    "type": "string"
-                },
-                "api_key": {
-                    "type": "string"
-                },
-                "api_version": {
-                    "description": "for azure openai",
-                    "type": "string"
-                },
-                "base_url": {
-                    "type": "string"
-                },
-                "completion_tokens": {
+                "context_window": {
                     "type": "integer"
                 },
-                "id": {
-                    "type": "string"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "prompt_tokens": {
+                "max_tokens": {
                     "type": "integer"
                 },
-                "provider": {
-                    "$ref": "#/definitions/domain.ModelProvider"
+                "r1_enabled": {
+                    "type": "boolean"
                 },
-                "total_tokens": {
-                    "type": "integer"
+                "support_computer_use": {
+                    "type": "boolean"
                 },
-                "type": {
-                    "$ref": "#/definitions/domain.ModelType"
+                "support_images": {
+                    "type": "boolean"
+                },
+                "support_prompt_cache": {
+                    "type": "boolean"
                 }
             }
-        },
-        "domain.ModelProvider": {
-            "type": "string",
-            "enum": [
-                "OpenAI",
-                "Ollama",
-                "DeepSeek",
-                "Moonshot",
-                "SiliconFlow",
-                "AzureOpenAI",
-                "BaiZhiCloud",
-                "Hunyuan",
-                "BaiLian",
-                "Volcengine",
-                "Other"
-            ],
-            "x-enum-varnames": [
-                "ModelProviderBrandOpenAI",
-                "ModelProviderBrandOllama",
-                "ModelProviderBrandDeepSeek",
-                "ModelProviderBrandMoonshot",
-                "ModelProviderBrandSiliconFlow",
-                "ModelProviderBrandAzureOpenAI",
-                "ModelProviderBrandBaiZhiCloud",
-                "ModelProviderBrandHunyuan",
-                "ModelProviderBrandBaiLian",
-                "ModelProviderBrandVolcengine",
-                "ModelProviderBrandOther"
-            ]
         },
         "domain.ModelType": {
             "type": "string",
@@ -3954,9 +5139,7 @@ const docTemplate = `{
                 "action": {
                     "type": "string",
                     "enum": [
-                        "delete",
-                        "private",
-                        "public"
+                        "delete"
                     ]
                 },
                 "ids": {
@@ -3970,41 +5153,29 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.NodeDetailResp": {
+        "domain.NodeGroupDetail": {
             "type": "object",
             "properties": {
-                "content": {
-                    "type": "string"
+                "auth_group_id": {
+                    "type": "integer"
                 },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
+                "auth_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 },
                 "kb_id": {
                     "type": "string"
                 },
-                "meta": {
-                    "$ref": "#/definitions/domain.NodeMeta"
-                },
                 "name": {
                     "type": "string"
                 },
-                "parent_id": {
+                "node_id": {
                     "type": "string"
                 },
-                "status": {
-                    "$ref": "#/definitions/domain.NodeStatus"
-                },
-                "type": {
-                    "$ref": "#/definitions/domain.NodeType"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "visibility": {
-                    "$ref": "#/definitions/domain.NodeVisibility"
+                "perm": {
+                    "$ref": "#/definitions/consts.NodePermName"
                 }
             }
         },
@@ -4012,6 +5183,18 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "created_at": {
+                    "type": "string"
+                },
+                "creator": {
+                    "type": "string"
+                },
+                "creator_id": {
+                    "type": "string"
+                },
+                "editor": {
+                    "type": "string"
+                },
+                "editor_id": {
                     "type": "string"
                 },
                 "emoji": {
@@ -4025,6 +5208,9 @@ const docTemplate = `{
                 },
                 "parent_id": {
                     "type": "string"
+                },
+                "permissions": {
+                    "$ref": "#/definitions/domain.NodePermissions"
                 },
                 "position": {
                     "type": "number"
@@ -4040,9 +5226,6 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
-                },
-                "visibility": {
-                    "$ref": "#/definitions/domain.NodeVisibility"
                 }
             }
         },
@@ -4057,8 +5240,38 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.NodePermissions": {
+            "type": "object",
+            "properties": {
+                "answerable": {
+                    "description": "可被问答",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.NodeAccessPerm"
+                        }
+                    ]
+                },
+                "visible": {
+                    "description": "导航内可见",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.NodeAccessPerm"
+                        }
+                    ]
+                },
+                "visitable": {
+                    "description": "可被访问",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.NodeAccessPerm"
+                        }
+                    ]
+                }
+            }
+        },
         "domain.NodeStatus": {
             "type": "integer",
+            "format": "int32",
             "enum": [
                 1,
                 2
@@ -4088,6 +5301,7 @@ const docTemplate = `{
         },
         "domain.NodeType": {
             "type": "integer",
+            "format": "int32",
             "enum": [
                 1,
                 2
@@ -4095,17 +5309,6 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "NodeTypeFolder",
                 "NodeTypeDocument"
-            ]
-        },
-        "domain.NodeVisibility": {
-            "type": "integer",
-            "enum": [
-                1,
-                2
-            ],
-            "x-enum-varnames": [
-                "NodeVisibilityPrivate",
-                "NodeVisibilityPublic"
             ]
         },
         "domain.NotnionGetListReq": {
@@ -4124,6 +5327,21 @@ const docTemplate = `{
             "properties": {
                 "key": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.PWResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
                 }
             }
         },
@@ -4152,6 +5370,20 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.PaginatedResult-array_domain_ConversationMessageListItem": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ConversationMessageListItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },
@@ -4231,22 +5463,6 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/domain.NodeType"
-                }
-            }
-        },
-        "domain.ResetPasswordReq": {
-            "type": "object",
-            "required": [
-                "id",
-                "new_password"
-            ],
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "new_password": {
-                    "type": "string",
-                    "minLength": 8
                 }
             }
         },
@@ -4365,6 +5581,91 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ShareCommentListItem": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "info": {
+                    "$ref": "#/definitions/domain.CommentInfo"
+                },
+                "ip_address": {
+                    "description": "ip地址",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.IPAddress"
+                        }
+                    ]
+                },
+                "kb_id": {
+                    "type": "string"
+                },
+                "node_id": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "root_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ShareConversationDetailResp": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ShareConversationMessage"
+                    }
+                },
+                "subject": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ShareConversationMessage": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/schema.RoleType"
+                }
+            }
+        },
+        "domain.SiYuanResp": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "title": {
                     "type": "string"
                 }
             }
@@ -4513,25 +5814,11 @@ const docTemplate = `{
                 "model": {
                     "type": "string"
                 },
+                "param": {
+                    "$ref": "#/definitions/domain.ModelParam"
+                },
                 "provider": {
-                    "enum": [
-                        "OpenAI",
-                        "Ollama",
-                        "DeepSeek",
-                        "SiliconFlow",
-                        "Moonshot",
-                        "Other",
-                        "AzureOpenAI",
-                        "BaiZhiCloud",
-                        "Hunyuan",
-                        "BaiLian",
-                        "Volcengine"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.ModelProvider"
-                        }
-                    ]
+                    "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider"
                 },
                 "type": {
                     "enum": [
@@ -4569,17 +5856,20 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "position": {
+                    "type": "number"
+                },
                 "summary": {
                     "type": "string"
-                },
-                "visibility": {
-                    "$ref": "#/definitions/domain.NodeVisibility"
                 }
             }
         },
         "domain.UserInfo": {
             "type": "object",
             "properties": {
+                "auth_user_id": {
+                    "type": "integer"
+                },
                 "avatar": {
                     "description": "avatar",
                     "type": "string"
@@ -4601,33 +5891,24 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.UserInfoResp": {
+        "domain.WebAppCommentSettings": {
             "type": "object",
             "properties": {
-                "account": {
-                    "type": "string"
+                "is_enable": {
+                    "type": "boolean"
                 },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "last_access": {
-                    "type": "string"
+                "moderation_enable": {
+                    "type": "boolean"
                 }
             }
         },
-        "domain.UserListItemResp": {
+        "domain.WebAppCustomSettings": {
             "type": "object",
             "properties": {
-                "account": {
-                    "type": "string"
+                "allow_theme_switching": {
+                    "type": "boolean"
                 },
-                "id": {
-                    "type": "string"
-                },
-                "last_access": {
+                "header_search_placeholder": {
                     "type": "string"
                 }
             }
@@ -4663,19 +5944,120 @@ const docTemplate = `{
                 }
             }
         },
-        "handler_v1.ConversationListItems": {
+        "domain.YuqueResp": {
             "type": "object",
             "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.ConversationListItem"
-                    }
+                "content": {
+                    "type": "string"
                 },
-                "total": {
-                    "type": "integer"
+                "title": {
+                    "type": "string"
                 }
             }
+        },
+        "github_com_chaitin_panda-wiki_domain.CheckModelReq": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "model",
+                "provider",
+                "type"
+            ],
+            "properties": {
+                "api_header": {
+                    "type": "string"
+                },
+                "api_key": {
+                    "type": "string"
+                },
+                "api_version": {
+                    "description": "for azure openai",
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "provider": {
+                    "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider"
+                },
+                "type": {
+                    "enum": [
+                        "chat",
+                        "embedding",
+                        "rerank"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ModelType"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_chaitin_panda-wiki_domain.CheckModelResp": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_chaitin_panda-wiki_domain.ModelListItem": {
+            "type": "object",
+            "properties": {
+                "api_header": {
+                    "type": "string"
+                },
+                "api_key": {
+                    "type": "string"
+                },
+                "api_version": {
+                    "description": "for azure openai",
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "completion_tokens": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "parameters": {
+                    "$ref": "#/definitions/domain.ModelParam"
+                },
+                "prompt_tokens": {
+                    "type": "integer"
+                },
+                "provider": {
+                    "$ref": "#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/domain.ModelType"
+                }
+            }
+        },
+        "github_com_chaitin_panda-wiki_domain.ModelProvider": {
+            "type": "string",
+            "enum": [
+                "BaiZhiCloud"
+            ],
+            "x-enum-varnames": [
+                "ModelProviderBrandBaiZhiCloud"
+            ]
         },
         "schema.RoleType": {
             "type": "string",
@@ -4691,18 +6073,404 @@ const docTemplate = `{
                 "System",
                 "Tool"
             ]
+        },
+        "share.ShareCommentLists": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ShareCommentListItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.AuthGetResp": {
+            "type": "object",
+            "properties": {
+                "auth_type": {
+                    "$ref": "#/definitions/consts.AuthType"
+                },
+                "source_type": {
+                    "$ref": "#/definitions/consts.SourceType"
+                }
+            }
+        },
+        "v1.AuthLoginSimpleReq": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.CommentLists": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.CommentListItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.ConversationListItems": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ConversationListItem"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.CreateUserReq": {
+            "type": "object",
+            "required": [
+                "account",
+                "password",
+                "role"
+            ],
+            "properties": {
+                "account": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "role": {
+                    "enum": [
+                        "admin",
+                        "user"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.UserRole"
+                        }
+                    ]
+                }
+            }
+        },
+        "v1.DeleteUserReq": {
+            "type": "object",
+            "required": [
+                "user_id"
+            ],
+            "properties": {
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.KBUserInviteReq": {
+            "type": "object",
+            "required": [
+                "kb_id",
+                "perm",
+                "user_id"
+            ],
+            "properties": {
+                "kb_id": {
+                    "type": "string"
+                },
+                "perm": {
+                    "enum": [
+                        "full_control",
+                        "doc_manage",
+                        "data_operate"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.UserKBPermission"
+                        }
+                    ]
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.KBUserListItemResp": {
+            "type": "object",
+            "properties": {
+                "account": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "perms": {
+                    "$ref": "#/definitions/consts.UserKBPermission"
+                },
+                "role": {
+                    "$ref": "#/definitions/consts.UserRole"
+                }
+            }
+        },
+        "v1.KBUserUpdateReq": {
+            "type": "object",
+            "required": [
+                "kb_id",
+                "perm",
+                "user_id"
+            ],
+            "properties": {
+                "kb_id": {
+                    "type": "string"
+                },
+                "perm": {
+                    "enum": [
+                        "full_control",
+                        "doc_manage",
+                        "data_operate"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/consts.UserKBPermission"
+                        }
+                    ]
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.LoginReq": {
+            "type": "object",
+            "required": [
+                "account",
+                "password"
+            ],
+            "properties": {
+                "account": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.LoginResp": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.NodeDetailResp": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kb_id": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/domain.NodeMeta"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "$ref": "#/definitions/domain.NodePermissions"
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.NodeStatus"
+                },
+                "type": {
+                    "$ref": "#/definitions/domain.NodeType"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.NodePermissionEditReq": {
+            "type": "object",
+            "required": [
+                "id",
+                "kb_id"
+            ],
+            "properties": {
+                "answerable_groups": {
+                    "description": "可被问答",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kb_id": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "$ref": "#/definitions/domain.NodePermissions"
+                },
+                "visible_groups": {
+                    "description": "导航内可见",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "visitable_groups": {
+                    "description": "可被访问",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "v1.NodePermissionEditResp": {
+            "type": "object"
+        },
+        "v1.NodePermissionResp": {
+            "type": "object",
+            "properties": {
+                "answerable_groups": {
+                    "description": "可被问答",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.NodeGroupDetail"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "$ref": "#/definitions/domain.NodePermissions"
+                },
+                "visible_groups": {
+                    "description": "导航内可见",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.NodeGroupDetail"
+                    }
+                },
+                "visitable_groups": {
+                    "description": "可被访问",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.NodeGroupDetail"
+                    }
+                }
+            }
+        },
+        "v1.ResetPasswordReq": {
+            "type": "object",
+            "required": [
+                "id",
+                "new_password"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
+        "v1.UserInfoResp": {
+            "type": "object",
+            "properties": {
+                "account": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_access": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/consts.UserRole"
+                }
+            }
+        },
+        "v1.UserListItemResp": {
+            "type": "object",
+            "properties": {
+                "account": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_access": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/consts.UserRole"
+                }
+            }
+        },
+        "v1.UserListResp": {
+            "type": "object",
+            "properties": {
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.UserListItemResp"
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "bearerAuth": {
+            "description": "Type \"Bearer\" + a space + your token to authorize",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0",
 	Host:             "",
-	BasePath:         "",
+	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "panda-wiki API",
+	Description:      "panda-wiki API documentation",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

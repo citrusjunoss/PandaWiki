@@ -21,9 +21,10 @@ type StatUseCase struct {
 	ipRepo           *ipdb.IPAddressRepo
 	logger           *log.Logger
 	geoCacheRepo     *cache.GeoRepo
+	authRepo         *pg.AuthRepo
 }
 
-func NewStatUseCase(repo *pg.StatRepository, nodeRepo *pg.NodeRepository, conversationRepo *pg.ConversationRepository, appRepo *pg.AppRepository, ipRepo *ipdb.IPAddressRepo, geoCacheRepo *cache.GeoRepo, logger *log.Logger) *StatUseCase {
+func NewStatUseCase(repo *pg.StatRepository, nodeRepo *pg.NodeRepository, conversationRepo *pg.ConversationRepository, appRepo *pg.AppRepository, ipRepo *ipdb.IPAddressRepo, geoCacheRepo *cache.GeoRepo, authRepo *pg.AuthRepo, logger *log.Logger) *StatUseCase {
 	return &StatUseCase{
 		repo:             repo,
 		nodeRepo:         nodeRepo,
@@ -31,6 +32,7 @@ func NewStatUseCase(repo *pg.StatRepository, nodeRepo *pg.NodeRepository, conver
 		appRepo:          appRepo,
 		ipRepo:           ipRepo,
 		geoCacheRepo:     geoCacheRepo,
+		authRepo:         authRepo,
 		logger:           logger.WithModule("usecase.stats"),
 	}
 }
@@ -128,6 +130,7 @@ func (u *StatUseCase) GetInstantPages(ctx context.Context, kbID string) ([]*doma
 	if err != nil {
 		return nil, err
 	}
+	authIDs := make([]uint, 0, 10)
 	for _, page := range pages {
 		ipAddress, ok := ipAddresses[page.IP]
 		if !ok {
@@ -139,6 +142,13 @@ func (u *StatUseCase) GetInstantPages(ctx context.Context, kbID string) ([]*doma
 			}
 		}
 		page.IPAddress = *ipAddress
+		if page.UserID != 0 {
+			authIDs = append(authIDs, page.UserID)
+		}
+	}
+	authMap, err := u.authRepo.GetAuthUserinfoByIDs(ctx, authIDs)
+	if err != nil {
+		u.logger.Error("get user info failed", log.Error(err))
 	}
 	nodeIDs := lo.Uniq(lo.Map(pages, func(page *domain.InstantPageResp, _ int) string {
 		return page.NodeID
@@ -159,6 +169,13 @@ func (u *StatUseCase) GetInstantPages(ctx context.Context, kbID string) ([]*doma
 			page.NodeName = "登录页"
 		default:
 			page.NodeName = "未知"
+		}
+		if _, ok := authMap[page.UserID]; ok {
+			page.Info = &domain.AuthUserInfo{
+				Username:  authMap[page.UserID].AuthUserInfo.Username,
+				Email:     authMap[page.UserID].AuthUserInfo.Email,
+				AvatarUrl: authMap[page.UserID].AuthUserInfo.AvatarUrl,
+			}
 		}
 	}
 	return pages, nil

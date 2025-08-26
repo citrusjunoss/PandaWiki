@@ -43,11 +43,7 @@ func (u *FileUsecase) UploadFile(ctx context.Context, kbID string, file *multipa
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	filename := fmt.Sprintf("%s/%s%s", kbID, uuid.New().String(), ext)
 
-	maxSize := u.config.S3.MaxFileSize
 	size := file.Size
-	if size > int64(maxSize) { // 100MB
-		return "", fmt.Errorf("file size too large")
-	}
 
 	contentType := file.Header.Get("Content-Type")
 	if contentType == "" {
@@ -81,11 +77,7 @@ func (u *FileUsecase) UploadFileFromBytes(ctx context.Context, kbID string, file
 	ext := strings.ToLower(filepath.Ext(filename))
 	s3Filename := fmt.Sprintf("%s/%s%s", kbID, uuid.New().String(), ext)
 
-	maxSize := u.config.S3.MaxFileSize
 	size := int64(len(fileBytes))
-	if size > int64(maxSize) { // 100MB
-		return "", fmt.Errorf("file size too large")
-	}
 
 	contentType := mime.TypeByExtension(ext)
 	if contentType == "" {
@@ -113,22 +105,30 @@ func (u *FileUsecase) UploadFileFromBytes(ctx context.Context, kbID string, file
 	return resp.Key, nil
 }
 
-func (u *FileUsecase) UploadFileFromReader(ctx context.Context, kbID string, filename string, size int64, file io.Reader) (string, error) {
+func (u *FileUsecase) UploadFileFromReader(
+	ctx context.Context,
+	kbID string,
+	filename string,
+	reader io.Reader,
+	size int64, // 必须提供对象大小
+) (string, error) {
+	// 生成唯一文件名
 	ext := strings.ToLower(filepath.Ext(filename))
-	filename = fmt.Sprintf("%s/%s%s", kbID, uuid.New().String(), ext)
+	s3Filename := fmt.Sprintf("%s/%s%s", kbID, uuid.New().String(), ext)
 
-	maxSize := u.config.S3.MaxFileSize
-	if size > int64(maxSize) { // 100MB
-		return "", fmt.Errorf("file size too large")
-	}
+	// 获取内容类型
 	contentType := mime.TypeByExtension(ext)
+	if contentType == "" {
+		contentType = "application/octet-stream" // 默认类型
+	}
 
-	resp, err := u.s3Client.PutObject(
+	// 上传到 S3
+	_, err := u.s3Client.PutObject(
 		ctx,
 		domain.Bucket,
-		filename,
-		file,
-		size,
+		s3Filename,
+		reader,
+		size, // 必须提供对象大小
 		minio.PutObjectOptions{
 			ContentType: contentType,
 			UserMetadata: map[string]string{
@@ -137,8 +137,8 @@ func (u *FileUsecase) UploadFileFromReader(ctx context.Context, kbID string, fil
 		},
 	)
 	if err != nil {
-		return "", fmt.Errorf("upload failed: %w", err)
+		return "", fmt.Errorf("S3 upload failed: %w", err)
 	}
 
-	return resp.Key, nil
+	return s3Filename, nil
 }

@@ -21,22 +21,28 @@ type BaseHandler struct {
 	baseLogger          *log.Logger
 	config              *config.Config
 	ShareAuthMiddleware *middleware.ShareAuthMiddleware
+	V1Auth              middleware.AuthMiddleware
 }
 
-func NewBaseHandler(echo *echo.Echo, logger *log.Logger, config *config.Config, shareAuthMiddleware *middleware.ShareAuthMiddleware) *BaseHandler {
+func NewBaseHandler(echo *echo.Echo, logger *log.Logger, config *config.Config, v1Auth middleware.AuthMiddleware, shareAuthMiddleware *middleware.ShareAuthMiddleware) *BaseHandler {
 	return &BaseHandler{
 		Router:              echo,
 		baseLogger:          logger.WithModule("http_base_handler"),
 		config:              config,
 		ShareAuthMiddleware: shareAuthMiddleware,
+		V1Auth:              v1Auth,
 	}
 }
 
 func (h *BaseHandler) NewResponseWithData(c echo.Context, data any) error {
-	return c.JSON(http.StatusOK, domain.Response{
+	return c.JSON(http.StatusOK, domain.PWResponse{
 		Success: true,
 		Data:    data,
 	})
+}
+
+func (h *BaseHandler) NewResponseWithErrCode(c echo.Context, resp domain.PWResponseErrCode) error {
+	return c.JSON(http.StatusOK, resp)
 }
 
 func (h *BaseHandler) NewResponseWithError(c echo.Context, msg string, err error) error {
@@ -49,7 +55,7 @@ func (h *BaseHandler) NewResponseWithError(c echo.Context, msg string, err error
 		traceID = uuid.New().String()
 	}
 	h.baseLogger.LogAttrs(c.Request().Context(), slog.LevelError, msg, slog.String("trace_id", traceID), slog.Any("error", err))
-	return c.JSON(http.StatusOK, domain.Response{
+	return c.JSON(http.StatusOK, domain.PWResponse{
 		Success: false,
 		Message: fmt.Sprintf("%s [trace_id: %s]", msg, traceID),
 	})

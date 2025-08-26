@@ -1,23 +1,19 @@
 package domain
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
 	"time"
+
+	modelkitConsts "github.com/chaitin/ModelKit/consts"
+	modelkitDomain "github.com/chaitin/ModelKit/domain"
 )
 
 type ModelProvider string
 
 const (
-	ModelProviderBrandOpenAI      ModelProvider = "OpenAI"
-	ModelProviderBrandOllama      ModelProvider = "Ollama"
-	ModelProviderBrandDeepSeek    ModelProvider = "DeepSeek"
-	ModelProviderBrandMoonshot    ModelProvider = "Moonshot"
-	ModelProviderBrandSiliconFlow ModelProvider = "SiliconFlow"
-	ModelProviderBrandAzureOpenAI ModelProvider = "AzureOpenAI"
 	ModelProviderBrandBaiZhiCloud ModelProvider = "BaiZhiCloud"
-	ModelProviderBrandHunyuan     ModelProvider = "Hunyuan"
-	ModelProviderBrandBaiLian     ModelProvider = "BaiLian"
-	ModelProviderBrandVolcengine  ModelProvider = "Volcengine"
-	ModelProviderBrandOther       ModelProvider = "Other"
 )
 
 type ModelType string
@@ -44,8 +40,26 @@ type Model struct {
 	CompletionTokens uint64 `json:"completion_tokens" gorm:"default:0"`
 	TotalTokens      uint64 `json:"total_tokens" gorm:"default:0"`
 
+	Parameters ModelParam `json:"parameters" gorm:"column:parameters;type:jsonb"` // 高级参数
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ToModelkitModel converts domain.Model to modelkitDomain.PandaModel
+func (m *Model) ToModelkitModel() (*modelkitDomain.ModelMetadata, error) {
+	provider := modelkitConsts.ParseModelProvider(string(m.Provider))
+	modelType := modelkitConsts.ParseModelType(string(m.Type))
+
+	return &modelkitDomain.ModelMetadata{
+		Provider:   provider,
+		ModelName:  m.Model,
+		APIKey:     m.APIKey,
+		BaseURL:    m.BaseURL,
+		APIVersion: m.APIVersion,
+		APIHeader:  m.APIHeader,
+		ModelType:  modelType,
+	}, nil
 }
 
 type ModelListItem struct {
@@ -58,9 +72,10 @@ type ModelListItem struct {
 	APIVersion string        `json:"api_version"` // for azure openai
 	Type       ModelType     `json:"type"`
 
-	PromptTokens     uint64 `json:"prompt_tokens"`
-	CompletionTokens uint64 `json:"completion_tokens"`
-	TotalTokens      uint64 `json:"total_tokens"`
+	PromptTokens     uint64     `json:"prompt_tokens"`
+	CompletionTokens uint64     `json:"completion_tokens"`
+	TotalTokens      uint64     `json:"total_tokens"`
+	Parameters       ModelParam `json:"parameters" gorm:"column:parameters"`
 }
 
 type ModelDetailResp struct {
@@ -71,19 +86,51 @@ type ModelDetailResp struct {
 
 type CreateModelReq struct {
 	BaseModelInfo
+	Param *ModelParam `json:"param"`
 }
 
 type UpdateModelReq struct {
 	ID string `json:"id" validate:"required"`
 	BaseModelInfo
+	Param *ModelParam `json:"param"`
 }
 
 type CheckModelReq struct {
 	BaseModelInfo
 }
 
+type ModelParam struct {
+	ContextWindow      int  `json:"context_window"`
+	MaxTokens          int  `json:"max_tokens"`
+	R1Enabled          bool `json:"r1_enabled"`
+	SupportComputerUse bool `json:"support_computer_use"`
+	SupportImages      bool `json:"support_images"`
+	SupportPromptCache bool `json:"support_prompt_cache"`
+}
+
+// Value implements the driver.Valuer interface for GORM
+func (p ModelParam) Value() (driver.Value, error) {
+	return json.Marshal(p)
+}
+
+// Scan implements the sql.Scanner interface for GORM
+func (p *ModelParam) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, p)
+	case string:
+		return json.Unmarshal([]byte(v), p)
+	default:
+		return fmt.Errorf("cannot scan %T into ModelParam", value)
+	}
+}
+
 type BaseModelInfo struct {
-	Provider   ModelProvider `json:"provider" validate:"required,oneof=OpenAI Ollama DeepSeek SiliconFlow Moonshot Other AzureOpenAI BaiZhiCloud Hunyuan BaiLian Volcengine"`
+	Provider   ModelProvider `json:"provider" validate:"required"`
 	Model      string        `json:"model" validate:"required"`
 	BaseURL    string        `json:"base_url" validate:"required"`
 	APIKey     string        `json:"api_key"`
@@ -97,45 +144,8 @@ type CheckModelResp struct {
 	Content string `json:"content"`
 }
 
-var ModelProviderBrandModelsList = map[ModelProvider][]ProviderModelListItem{
-	ModelProviderBrandOpenAI: {
-		{Model: "gpt-4o"},
-	},
-	ModelProviderBrandDeepSeek: {
-		{Model: "deepseek-reasoner"},
-		{Model: "deepseek-chat"},
-	},
-	ModelProviderBrandMoonshot: {
-		{Model: "moonshot-v1-auto"},
-		{Model: "moonshot-v1-8k"},
-		{Model: "moonshot-v1-32k"},
-		{Model: "moonshot-v1-128k"},
-	},
-	ModelProviderBrandAzureOpenAI: {
-		{Model: "gpt-4"},
-		{Model: "gpt-4o"},
-		{Model: "gpt-4o-mini"},
-		{Model: "gpt-4o-nano"},
-		{Model: "gpt-4.1"},
-		{Model: "gpt-4.1-mini"},
-		{Model: "gpt-4.1-nano"},
-		{Model: "o1"},
-		{Model: "o1-mini"},
-		{Model: "o3"},
-		{Model: "o3-mini"},
-		{Model: "o4-mini"},
-	},
-	ModelProviderBrandVolcengine: {
-		{Model: "doubao-seed-1.6-250615"},
-		{Model: "doubao-seed-1.6-flash-250615"},
-		{Model: "doubao-seed-1.6-thinking-250615"},
-		{Model: "doubao-1.5-thinking-vision-pro-250428"},
-		{Model: "deepseek-r1-250528"},
-	},
-}
-
 type GetProviderModelListReq struct {
-	Provider  string    `json:"provider" query:"provider" validate:"required,oneof=SiliconFlow OpenAI Ollama DeepSeek Moonshot AzureOpenAI BaiZhiCloud Hunyuan BaiLian Volcengine"`
+	Provider  string    `json:"provider" query:"provider" validate:"required"`
 	BaseURL   string    `json:"base_url" query:"base_url" validate:"required"`
 	APIKey    string    `json:"api_key" query:"api_key"`
 	APIHeader string    `json:"api_header" query:"api_header"`

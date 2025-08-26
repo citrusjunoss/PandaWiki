@@ -49,3 +49,7 @@ func (r *KBRepo) SetKB(ctx context.Context, kbID string, kb *domain.KnowledgeBas
 func (r *KBRepo) DeleteKB(ctx context.Context, kbID string) error {
 	return r.cache.Del(ctx, kbID).Err()
 }
+
+func (r *KBRepo) ClearSession(ctx context.Context) error {
+	return r.cache.DeleteKeysWithPrefix(ctx, "session_")
+}

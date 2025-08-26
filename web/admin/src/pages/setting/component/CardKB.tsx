@@ -1,107 +1,269 @@
-import { KnowledgeBaseListItem, updateKnowledgeBase } from "@/api"
-import Card from "@/components/Card"
-import { useAppSelector } from "@/store"
-import { setKbList } from "@/store/slices/config"
-import { Box, Button, Stack, TextField } from "@mui/material"
-import { Message } from "ct-mui"
-import { useEffect, useState } from "react"
-import { useDispatch } from "react-redux"
+import { updateKnowledgeBase } from '@/api';
+import {
+  deleteApiV1KnowledgeBaseUserDelete,
+  getApiV1KnowledgeBaseUserList,
+  patchApiV1KnowledgeBaseUserUpdate,
+} from '@/request/KnowledgeBase';
+
+import {
+  ConstsUserKBPermission,
+  DomainKnowledgeBaseDetail,
+  DomainAppDetailResp,
+  V1KBUserListItemResp,
+  V1KBUserUpdateReq,
+} from '@/request/types';
+import { useAppSelector } from '@/store';
+import { setKbList } from '@/store/slices/config';
+import InfoIcon from '@mui/icons-material/Info';
+import {
+  Box,
+  Button,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Tooltip,
+  styled,
+} from '@mui/material';
+import { Ellipsis, Icon, Message, Modal } from 'ct-mui';
+import { useEffect, useMemo, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import AddRole from './AddRole';
+import { SettingCard, SettingCardItem } from './Common';
 
 interface CardKBProps {
-  kb: KnowledgeBaseListItem
+  kb: DomainKnowledgeBaseDetail;
+  data?: DomainAppDetailResp;
 }
 
-const CardKB = ({ kb }: CardKBProps) => {
-  const { kbList } = useAppSelector(state => state.config)
-  const dispatch = useDispatch()
-  const [kbName, setKbName] = useState(kb.name)
-  const [isEdit, setIsEdit] = useState(false)
+const CardKB = ({ kb, data }: CardKBProps) => {
+  const { kbList, kb_id, license } = useAppSelector(state => state.config);
+  const dispatch = useDispatch();
+  const [kbName, setKbName] = useState(kb.name);
+  const [isEdit, setIsEdit] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [adminList, setAdminList] = useState<V1KBUserListItemResp[]>([]);
 
-  const handleSave = () => {
-    if (!kb.id) return
-    updateKnowledgeBase({ id: kb.id, name: kbName }).then(() => {
-      Message.success('保存成功')
-      dispatch(setKbList(kbList.map(item => item.id === kb.id ? { ...item, name: kbName } : item)))
-      setIsEdit(false)
-    })
-  }
+  const getUserList = () => {
+    getApiV1KnowledgeBaseUserList({
+      kb_id,
+    }).then(res => {
+      setAdminList(res || []);
+    });
+  };
+
+  const isEnterprise = useMemo(() => {
+    return license.edition === 2;
+  }, [license]);
 
   useEffect(() => {
-    setKbName(kb.name)
-  }, [kb])
+    if (!kb_id) return;
+    getUserList();
+  }, [kb_id]);
 
-  return <Card>
-    <Box sx={{ fontWeight: 'bold', px: 2, py: 1.5, bgcolor: 'background.paper2' }}>后台信息</Box>
-    <Stack direction='row' alignItems={'center'} justifyContent={'space-between'} sx={{
-      m: 2,
-      height: 32,
-      fontWeight: 'bold',
-    }}>
-      <Box sx={{
-        '&::before': {
-          content: '""',
-          display: 'inline-block',
-          width: 4,
-          height: 12,
-          bgcolor: 'common.black',
-          borderRadius: '2px',
-          mr: 1,
-        },
-      }}>知识库名称</Box>
-      {isEdit && <Button variant="contained" size="small" onClick={handleSave}>保存</Button>}
-    </Stack>
-    <Box sx={{ m: 2 }}>
-      <TextField
-        fullWidth
-        value={kbName}
-        onChange={(e) => {
-          setKbName(e.target.value)
-          setIsEdit(true)
+  const handleSave = () => {
+    if (!kb.id) return;
+    updateKnowledgeBase({ id: kb.id, name: kbName }).then(() => {
+      Message.success('保存成功');
+      dispatch(
+        setKbList(
+          kbList.map(item =>
+            item.id === kb.id ? { ...item, name: kbName } : item,
+          ),
+        ),
+      );
+      setIsEdit(false);
+    });
+  };
+
+  const onDeleteUser = (id: string) => {
+    Modal.confirm({
+      title: '删除管理员',
+      content: '确定删除该管理员吗？',
+      okButtonProps: {
+        color: 'error',
+      },
+      onOk: () => {
+        deleteApiV1KnowledgeBaseUserDelete({
+          kb_id,
+          user_id: id,
+        }).then(() => {
+          getUserList();
+          Message.success('删除成功');
+        });
+      },
+    });
+  };
+
+  const onUpdateUserPermission = (
+    id: string,
+    perm: V1KBUserUpdateReq['perm'],
+  ) => {
+    patchApiV1KnowledgeBaseUserUpdate({
+      kb_id,
+      user_id: id,
+      perm,
+    }).then(() => {
+      getUserList();
+      Message.success('更新成功');
+    });
+  };
+
+  useEffect(() => {
+    setKbName(kb.name);
+  }, [kb]);
+
+  return (
+    <SettingCard title='后台信息'>
+      <SettingCardItem
+        title='Wiki 站名称'
+        isEdit={isEdit}
+        onSubmit={handleSave}
+      >
+        <TextField
+          fullWidth
+          value={kbName}
+          onChange={e => {
+            setKbName(e.target.value);
+            setIsEdit(true);
+          }}
+        />
+      </SettingCardItem>
+
+      <SettingCardItem
+        title='Wiki 站管理员'
+        extra={
+          <Button
+            size='small'
+            startIcon={<Icon type='icon-tianjiachengyuan' />}
+            onClick={() => setAddOpen(true)}
+          >
+            添加 Wiki 站管理员
+          </Button>
+        }
+      >
+        <Box
+          sx={{
+            borderRadius: '10px',
+            border: '1px solid',
+            borderColor: 'divider',
+            overflow: 'auto',
+            maxHeight: 300,
+          }}
+        >
+          {adminList.map((it, idx) => (
+            <Stack
+              key={idx}
+              direction={'row'}
+              alignItems={'center'}
+              gap={8}
+              justifyContent={'space-between'}
+              sx={{
+                px: 2,
+                py: 1,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                '&:last-of-type': {
+                  borderBottom: 'none',
+                },
+              }}
+            >
+              <Stack
+                direction={'row'}
+                alignItems={'center'}
+                gap={2}
+                sx={{ flex: 1, minWidth: 0 }}
+              >
+                {/* <Avatar sx={{ width: 20, height: 20 }} /> */}
+                <Ellipsis sx={{ fontSize: 14 }}>{it.account}</Ellipsis>
+              </Stack>
+
+              <Stack direction={'row'} alignItems={'center'}>
+                <Select
+                  size='small'
+                  sx={{ width: 180 }}
+                  value={it.perms}
+                  disabled={!isEnterprise || it.role === 'admin'}
+                  onChange={e =>
+                    onUpdateUserPermission(
+                      it.id!,
+                      e.target.value as V1KBUserUpdateReq['perm'],
+                    )
+                  }
+                >
+                  <MenuItem
+                    value={ConstsUserKBPermission.UserKBPermissionFullControl}
+                  >
+                    完全控制
+                  </MenuItem>
+                  <MenuItem
+                    value={ConstsUserKBPermission.UserKBPermissionDocManage}
+                  >
+                    文档管理
+                  </MenuItem>
+                  <MenuItem
+                    value={ConstsUserKBPermission.UserKBPermissionDataOperate}
+                  >
+                    数据运营
+                  </MenuItem>
+                </Select>
+
+                <Tooltip
+                  title={
+                    it.role === 'admin'
+                      ? '超级管理员不可被修改权限'
+                      : '企业版可用'
+                  }
+                  placement='top'
+                  arrow
+                >
+                  <InfoIcon
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: 14,
+                      ml: 1,
+                      visibility:
+                        !isEnterprise || it.role === 'admin'
+                          ? 'visible'
+                          : 'hidden',
+                    }}
+                  />
+                </Tooltip>
+              </Stack>
+
+              <Tooltip
+                title={it.role === 'admin' ? '超级管理员不可被删除' : ''}
+                placement='top'
+                arrow
+              >
+                <Icon
+                  type='icon-icon_tool_close'
+                  sx={{
+                    cursor: it.role === 'admin' ? 'not-allowed' : 'pointer',
+                    color: it.role === 'admin' ? 'text.disabled' : 'error.main',
+                  }}
+                  onClick={() => {
+                    if (it.role === 'admin') return;
+                    onDeleteUser(it.id!);
+                  }}
+                />
+              </Tooltip>
+            </Stack>
+          ))}
+        </Box>
+      </SettingCardItem>
+
+      <AddRole
+        open={addOpen}
+        selectedIds={adminList.map(it => it.id!)}
+        onCancel={() => setAddOpen(false)}
+        onOk={() => {
+          getUserList();
+          setAddOpen(false);
         }}
       />
-    </Box>
-    {/* <Divider sx={{ my: 2 }} /> */}
-    {/* <Stack direction='row' alignItems={'center'} justifyContent={'space-between'} sx={{
-      m: 2,
-      height: 32,
-      '.MuiButton-startIcon': {
-        mr: 1,
-      }
-    }}>
-      <Box sx={{ fontWeight: 'bold' }}>成员与权限</Box>
-      <Button size="small" startIcon={<Icon type='icon-tianjiachengyuan' />} onClick={() => setAddOpen(true)}>
-        添加成员
-      </Button>
-    </Stack> */}
-    {/* <Box sx={{
-      m: 2,
-      borderRadius: '10px',
-      border: '1px solid',
-      borderColor: 'divider',
-    }}>
-      {new Array(10).fill(1).map((it, idx) => <Stack
-        key={idx}
-        direction={'row'}
-        alignItems={'center'}
-        justifyContent={'space-between'}
-        sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}
-      >
-        <Stack direction={'row'} alignItems={'center'} gap={2} sx={{ maxWidth: 'calc(100% - 322px)' }}>
-          <Avatar src={''} sx={{ width: 16 }} />
-          <Ellipsis sx={{ fontSize: 14, fontFamily: 'GBold', fontWeight: 'bold' }}>的减fjasdllfsdjflaskjfdldskjfksadljflasdjkfalsk肥沙拉卡</Ellipsis>
-        </Stack>
-        <Stack direction={'row'} alignItems={'center'} gap={2} flexShrink={0}>
-          <Button size='small' variant="outlined" sx={{ px: 1, height: 24 }}>查看分析</Button>
-          <Button size='small' variant="outlined" sx={{ px: 1, height: 24, color: 'text.disabled', borderColor: 'text.disabled' }}>管理文档</Button>
-          <Button size='small' variant="outlined" sx={{ px: 1, height: 24, color: 'text.disabled', borderColor: 'text.disabled' }}>修改设置</Button>
-          <IconButton size="small" sx={{ color: 'text.disabled', ':hover': { color: 'error.main' } }}>
-            <Icon type='icon-icon_tool_close' />
-          </IconButton>
-        </Stack>
-      </Stack>)}
-    </Box> */}
-    {/* <AddRole open={addOpen} onCancel={() => setAddOpen(false)} onOk={() => setAddOpen(false)} /> */}
-  </Card>
-}
+    </SettingCard>
+  );
+};
 
-export default CardKB
+export default CardKB;

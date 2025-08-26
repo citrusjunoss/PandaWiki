@@ -60,6 +60,10 @@ func (r *ModelRepository) Get(ctx context.Context, id string) (*domain.ModelDeta
 }
 
 func (r *ModelRepository) Update(ctx context.Context, req *domain.UpdateModelReq) error {
+	param := domain.ModelParam{}
+	if req.Param != nil {
+		param = *req.Param
+	}
 	return r.db.WithContext(ctx).
 		Model(&domain.Model{}).
 		Where("id = ?", req.ID).
@@ -71,6 +75,7 @@ func (r *ModelRepository) Update(ctx context.Context, req *domain.UpdateModelReq
 			"api_version": req.APIVersion,
 			"provider":    req.Provider,
 			"type":        req.Type,
+			"parameters":  param,
 		}).Error
 }
 

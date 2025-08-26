@@ -1,4 +1,4 @@
-import Login from "@/views/auth/login";
+import Login from '@/views/auth/login';
 
 const LoginPage = async () => {
   return <Login />;

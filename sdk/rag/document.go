@@ -13,9 +13,9 @@ import (
 	"strings"
 )
 
-// UploadDocuments 上传文档（支持多文件）
-func (c *Client) UploadDocumentsAndParse(ctx context.Context, datasetID string, filePaths []string) ([]Document, error) {
-	documents, err := c.UploadDocuments(ctx, datasetID, filePaths)
+// UploadDocuments 上传文档（支持多文件和权限设置）
+func (c *Client) UploadDocumentsAndParse(ctx context.Context, datasetID string, filePaths []string, groupIDs []int) ([]Document, error) {
+	documents, err := c.UploadDocuments(ctx, datasetID, filePaths, groupIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +36,8 @@ func (c *Client) UploadDocumentsAndParse(ctx context.Context, datasetID string, 
 	return documents, nil
 }
 
-// UploadDocuments 上传文档（支持多文件）
-func (c *Client) UploadDocuments(ctx context.Context, datasetID string, filePaths []string) ([]Document, error) {
+// UploadDocuments 上传文档（支持多文件和权限设置）
+func (c *Client) UploadDocuments(ctx context.Context, datasetID string, filePaths []string, groupIDs []int) ([]Document, error) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 	for _, path := range filePaths {
@@ -51,6 +51,17 @@ func (c *Client) UploadDocuments(ctx context.Context, datasetID string, filePath
 			return nil, err
 		}
 		if _, err := io.Copy(fw, file); err != nil {
+			return nil, err
+		}
+	}
+
+	// 添加 group_ids：nil 不写入，空切片 [] 会写入 "[]"
+	if groupIDs != nil {
+		gids, err := json.Marshal(groupIDs)
+		if err != nil {
+			return nil, err
+		}
+		if err := w.WriteField("group_ids", string(gids)); err != nil {
 			return nil, err
 		}
 	}
@@ -152,13 +163,46 @@ func (c *Client) UpdateDocument(ctx context.Context, datasetID, documentID strin
 	return c.do(req, &resp)
 }
 
+// UpdateDocumentGroupIDs 更新单个文档的权限
+func (c *Client) UpdateDocumentGroupIDs(ctx context.Context, datasetID, documentID string, groupIDs []int) error {
+	urlPath := fmt.Sprintf("datasets/%s/documents/%s/group_ids", datasetID, documentID)
+	body := map[string]interface{}{}
+	if groupIDs != nil {
+		body["group_ids"] = groupIDs
+	}
+	req, err := c.newRequest(ctx, "PUT", urlPath, body)
+	if err != nil {
+		return err
+	}
+	var resp interface{}
+	return c.do(req, &resp)
+}
+
+// UpdateDocumentsGroupIDsBatch 批量更新文档的权限
+func (c *Client) UpdateDocumentsGroupIDsBatch(ctx context.Context, datasetID string, documentIDs []string, groupIDs []int) error {
+	urlPath := fmt.Sprintf("datasets/%s/documents/batch/group_ids", datasetID)
+	body := map[string]interface{}{
+		"document_ids": documentIDs,
+	}
+	if groupIDs != nil {
+		body["group_ids"] = groupIDs
+	}
+	req, err := c.newRequest(ctx, "PUT", urlPath, body)
+	if err != nil {
+		return err
+	}
+	var resp interface{}
+	return c.do(req, &resp)
+}
+
 // UploadDocumentText 上传文本内容为文档
-// jsonStr 形如 {"filename": "xxx.txt", "content": "...", "file_type": "text/plain"}
+// jsonStr 形如 {"filename": "xxx.txt", "content": "...", "file_type": "text/plain", "group_ids": [1,2,3]}
 func (c *Client) UploadDocumentText(ctx context.Context, datasetID string, jsonStr string) ([]Document, error) {
 	type input struct {
 		Filename string `json:"filename"`
 		Content  string `json:"content"`
 		FileType string `json:"file_type"`
+		GroupIDs []int  `json:"group_ids,omitempty"`
 	}
 	var in input
 	if err := json.Unmarshal([]byte(jsonStr), &in); err != nil {
@@ -228,6 +272,17 @@ func (c *Client) UploadDocumentText(ctx context.Context, datasetID string, jsonS
 	// 添加文件类型
 	if err := w.WriteField("file_type", in.FileType); err != nil {
 		return nil, err
+	}
+
+	// 添加 group_ids：nil 不写入，空切片 [] 会写入 "[]"
+	if in.GroupIDs != nil {
+		gids, err := json.Marshal(in.GroupIDs)
+		if err != nil {
+			return nil, err
+		}
+		if err := w.WriteField("group_ids", string(gids)); err != nil {
+			return nil, err
+		}
 	}
 
 	w.Close()

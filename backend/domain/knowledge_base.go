@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/chaitin/panda-wiki/consts"
 )
 
 // table: knowledge_bases
@@ -23,20 +25,36 @@ type KnowledgeBase struct {
 }
 
 type AccessSettings struct {
-	Ports          []int    `json:"ports"`
-	SSLPorts       []int    `json:"ssl_ports"`
-	PublicKey      string   `json:"public_key"`
-	PrivateKey     string   `json:"private_key"`
-	Hosts          []string `json:"hosts"`
-	BaseURL        string   `json:"base_url"`
-	TrustedProxies []string `json:"trusted_proxies"`
-
-	SimpleAuth SimpleAuth `json:"simple_auth"`
+	Ports          []int             `json:"ports"`
+	SSLPorts       []int             `json:"ssl_ports"`
+	PublicKey      string            `json:"public_key"`
+	PrivateKey     string            `json:"private_key"`
+	Hosts          []string          `json:"hosts"`
+	BaseURL        string            `json:"base_url"`
+	TrustedProxies []string          `json:"trusted_proxies"`
+	SimpleAuth     SimpleAuth        `json:"simple_auth"`
+	EnterpriseAuth EnterpriseAuth    `json:"enterprise_auth"`
+	SourceType     consts.SourceType `json:"source_type"`  // 企业认证来源
+	IsForbidden    bool              `json:"is_forbidden"` // 禁止访问
 }
 
 type SimpleAuth struct {
 	Enabled  bool   `json:"enabled"`
 	Password string `json:"password"`
+}
+
+type EnterpriseAuth struct {
+	Enabled bool `json:"enabled"`
+}
+
+func (s AccessSettings) GetAuthType() consts.AuthType {
+	if s.EnterpriseAuth.Enabled {
+		return consts.AuthTypeEnterprise
+	}
+	if s.SimpleAuth.Enabled && s.SimpleAuth.Password != "" {
+		return consts.AuthTypeSimple
+	}
+	return consts.AuthTypeNull
 }
 
 func (s *AccessSettings) Scan(value any) error {
@@ -59,6 +77,7 @@ type CreateKnowledgeBaseReq struct {
 	PublicKey  string   `json:"public_key"`
 	PrivateKey string   `json:"private_key"`
 	Hosts      []string `json:"hosts"`
+	MaxKB      int      `json:"-"`
 }
 
 type UpdateKnowledgeBaseReq struct {
@@ -83,9 +102,9 @@ type KnowledgeBaseDetail struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 
-	DatasetID string `json:"dataset_id"`
-
-	AccessSettings AccessSettings `json:"access_settings" gorm:"type:jsonb"`
+	DatasetID      string                  `json:"dataset_id"`
+	Perm           consts.UserKBPermission `json:"perm"` // 用户对知识库的权限
+	AccessSettings AccessSettings          `json:"access_settings" gorm:"type:jsonb"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

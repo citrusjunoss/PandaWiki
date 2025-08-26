@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	v1 "github.com/chaitin/panda-wiki/api/user/v1"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/store/pg"
@@ -71,20 +72,19 @@ func (r *UserRepository) VerifyUser(ctx context.Context, account string, passwor
 	return &user, nil
 }
 
-func (r *UserRepository) GetUser(ctx context.Context, userID string) (*domain.UserInfoResp, error) {
-	var user domain.UserInfoResp
+func (r *UserRepository) GetUser(ctx context.Context, userID string) (*domain.User, error) {
+	var user domain.User
 	err := r.db.WithContext(ctx).
-		Model(&domain.User{}).
 		Where("id = ?", userID).
-		Scan(&user).Error
+		First(&user).Error
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (r *UserRepository) ListUsers(ctx context.Context) ([]*domain.UserListItemResp, error) {
-	var users []*domain.UserListItemResp
+func (r *UserRepository) ListUsers(ctx context.Context) ([]v1.UserListItemResp, error) {
+	var users []v1.UserListItemResp
 	err := r.db.WithContext(ctx).
 		Model(&domain.User{}).
 		Order("created_at DESC").
@@ -104,5 +104,12 @@ func (r *UserRepository) UpdateUserPassword(ctx context.Context, userID string, 
 }
 
 func (r *UserRepository) DeleteUser(ctx context.Context, userID string) error {
-	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Delete(&domain.User{}).Error
+	if err := r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Delete(&domain.User{}).Error; err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).Model(&domain.KBUsers{}).Where("user_id = ?", userID).Delete(&domain.KBUsers{}).Error; err != nil {
+		return err
+	}
+	return nil
 }

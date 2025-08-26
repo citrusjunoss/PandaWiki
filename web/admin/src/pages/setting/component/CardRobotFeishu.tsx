@@ -1,159 +1,169 @@
-import { AppDetail, FeishuBotSetting, getAppDetail, KnowledgeBaseListItem, updateAppDetail } from "@/api"
-import { Box, Button, FormControlLabel, Link, Radio, RadioGroup, Stack, TextField } from "@mui/material"
-import { Message } from "ct-mui"
-import { useEffect, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { FeishuBotSetting, updateAppDetail } from '@/api';
+import {
+  Box,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  TextField,
+} from '@mui/material';
+import { Message } from 'ct-mui';
+import { useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { FormItem, SettingCardItem } from './Common';
+import {
+  DomainKnowledgeBaseDetail,
+  DomainAppDetailResp,
+} from '@/request/types';
+import { getApiV1AppDetail } from '@/request/App';
 
-const CardRobotFeishu = ({ kb }: { kb: KnowledgeBaseListItem }) => {
-  const [isEdit, setIsEdit] = useState(false)
-  const [detail, setDetail] = useState<AppDetail | null>(null)
-  const [isEnabled, setIsEnabled] = useState(false)
+const CardRobotFeishu = ({ kb }: { kb: DomainKnowledgeBaseDetail }) => {
+  const [isEdit, setIsEdit] = useState(false);
+  const [detail, setDetail] = useState<DomainAppDetailResp | null>(null);
+  const [isEnabled, setIsEnabled] = useState(false);
 
-
-  const { control, handleSubmit, formState: { errors }, reset } = useForm<FeishuBotSetting>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<FeishuBotSetting>({
     defaultValues: {
       feishu_bot_is_enabled: false,
       feishu_bot_app_id: '',
       feishu_bot_app_secret: '',
       feishu_bot_welcome_str: '',
-    }
-  })
+    },
+  });
 
   const getDetail = () => {
-    getAppDetail({ kb_id: kb.id, type: 4 }).then(res => {
-      setDetail(res)
-      setIsEnabled(res.settings.feishu_bot_is_enabled)
+    getApiV1AppDetail({ kb_id: kb.id!, type: '4' }).then(res => {
+      setDetail(res);
+      setIsEnabled(res.settings?.feishu_bot_is_enabled ?? false);
       reset({
-        feishu_bot_is_enabled: res.settings.feishu_bot_is_enabled,
-        feishu_bot_app_id: res.settings.feishu_bot_app_id,
-        feishu_bot_app_secret: res.settings.feishu_bot_app_secret,
-        feishu_bot_welcome_str: res.settings.feishu_bot_welcome_str,
-      })
-    })
-  }
+        feishu_bot_is_enabled: res.settings?.feishu_bot_is_enabled ?? false,
+        feishu_bot_app_id: res.settings?.feishu_bot_app_id ?? '',
+        feishu_bot_app_secret: res.settings?.feishu_bot_app_secret ?? '',
+        // @ts-expect-error 类型错误
+        feishu_bot_welcome_str: res.settings?.feishu_bot_welcome_str ?? '',
+      });
+    });
+  };
 
-  const onSubmit = (data: FeishuBotSetting) => {
-    if (!detail) return
-    updateAppDetail({ id: detail.id }, {
-      settings: {
-        feishu_bot_is_enabled: data.feishu_bot_is_enabled,
-        feishu_bot_app_id: data.feishu_bot_app_id,
-        feishu_bot_app_secret: data.feishu_bot_app_secret,
-        feishu_bot_welcome_str: data.feishu_bot_welcome_str,
-      }
-    }).then(() => {
-      Message.success('保存成功')
-      setIsEdit(false)
-      getDetail()
-      reset()
-    })
-  }
+  const onSubmit = handleSubmit(data => {
+    if (!detail) return;
+    updateAppDetail(
+      { id: detail.id! },
+      {
+        settings: {
+          feishu_bot_is_enabled: data.feishu_bot_is_enabled,
+          feishu_bot_app_id: data.feishu_bot_app_id,
+          feishu_bot_app_secret: data.feishu_bot_app_secret,
+          feishu_bot_welcome_str: data.feishu_bot_welcome_str,
+        },
+      },
+    ).then(() => {
+      Message.success('保存成功');
+      setIsEdit(false);
+      getDetail();
+      reset();
+    });
+  });
 
   useEffect(() => {
-    getDetail()
-  }, [kb])
+    getDetail();
+  }, [kb]);
 
-  return <>
-    <Stack direction='row' alignItems={'center'} justifyContent={'space-between'} sx={{
-      m: 2,
-      height: 32,
-      fontWeight: 'bold',
-    }}>
-      <Box sx={{
-        '&::before': {
-          content: '""',
-          display: 'inline-block',
-          width: 4,
-          height: 12,
-          bgcolor: 'common.black',
-          borderRadius: '2px',
-          mr: 1,
-        },
-      }}>飞书机器人</Box>
-      <Box sx={{ flexGrow: 1, ml: 1 }}>
-        <Link
-          component='a' 
-          href='https://pandawiki.docs.baizhi.cloud/node/01971b5f-4520-7c4b-8b4e-683ec5235adc' 
-          target="_blank"
-          sx={{
-            fontSize: 14,
-            textDecoration: 'none',
-            fontWeight: 'normal',
-            '&:hover': {
-              fontWeight: 'bold',
-            }
-          }}>使用方法</Link>
-      </Box>
-      {isEdit && <Button variant="contained" size="small" onClick={handleSubmit(onSubmit)}>保存</Button>}
-    </Stack>
-    <Stack gap={2} sx={{ m: 2 }}>
-      <Stack direction={'row'} alignItems={'center'} gap={2}>
-        <Box sx={{ width: 156, fontSize: 14, lineHeight: '32px' }}>飞书机器人</Box>
+  return (
+    <SettingCardItem
+      title='飞书机器人'
+      isEdit={isEdit}
+      onSubmit={onSubmit}
+      more={{
+        type: 'link',
+        href: 'https://pandawiki.docs.baizhi.cloud/node/01971b5f-4520-7c4b-8b4e-683ec5235adc',
+        target: '_blank',
+        text: '使用方法',
+      }}
+    >
+      <FormItem label='飞书机器人' required>
         <Controller
           control={control}
-          name="feishu_bot_is_enabled"
-          render={({ field }) => <RadioGroup row {...field} onChange={(e) => {
-            field.onChange(e.target.value === "true")
-            setIsEnabled(e.target.value === "true")
-            setIsEdit(true)
-          }}>
-            <FormControlLabel value={true} control={<Radio size='small' />} label={<Box sx={{ width: 100 }}>启用</Box>} />
-            <FormControlLabel value={false} control={<Radio size='small' />} label={<Box sx={{ width: 100 }}>禁用</Box>} />
-          </RadioGroup>}
+          name='feishu_bot_is_enabled'
+          render={({ field }) => (
+            <RadioGroup
+              row
+              {...field}
+              onChange={e => {
+                field.onChange(e.target.value === 'true');
+                setIsEnabled(e.target.value === 'true');
+                setIsEdit(true);
+              }}
+            >
+              <FormControlLabel
+                value={true}
+                control={<Radio size='small' />}
+                label={<Box sx={{ width: 100 }}>启用</Box>}
+              />
+              <FormControlLabel
+                value={false}
+                control={<Radio size='small' />}
+                label={<Box sx={{ width: 100 }}>禁用</Box>}
+              />
+            </RadioGroup>
+          )}
         />
-      </Stack>
-      {isEnabled && <>
-        <Stack direction='row' gap={2} alignItems={'center'} justifyContent={'space-between'} >
-          <Box sx={{ width: 156, fontSize: 14, lineHeight: '32px', flexShrink: 0 }}>
-            App ID
-            <Box component={'span'} sx={{ color: 'red', ml: 0.5 }}>*</Box>
-          </Box>
-          <Controller
-            control={control}
-            name="feishu_bot_app_id"
-            rules={{
-              required: 'App ID',
-            }}
-            render={({ field }) => <TextField
-              {...field}
-              fullWidth
-              placeholder="> 飞书开放平台 > 凭证与基础信息 > 应用凭证 > App ID"
-              onChange={(e) => {
-                field.onChange(e.target.value)
-                setIsEdit(true)
-              }}
-              error={!!errors.feishu_bot_app_id}
-              helperText={errors.feishu_bot_app_id?.message}
-            />}
-          />
-        </Stack>
-        <Stack direction='row' gap={2} alignItems={'center'} justifyContent={'space-between'} >
+      </FormItem>
 
-          <Box sx={{ width: 156, fontSize: 14, lineHeight: '32px', flexShrink: 0}}>
-            App Secret
-            <Box component={'span'} sx={{ color: 'red', ml: 0.5 }}>*</Box>
-          </Box>
-          <Controller
-            control={control}
-            name="feishu_bot_app_secret"
-            rules={{
-              required: 'App Secret',
-            }}
-            render={({ field }) => <TextField
-              {...field}
-              fullWidth
-              placeholder="> 飞书开放平台 > 凭证与基础信息 > 应用凭证 > App Secret"
-              onChange={(e) => {
-                field.onChange(e.target.value)
-                setIsEdit(true)
+      {isEnabled && (
+        <>
+          <FormItem label='App ID' required>
+            <Controller
+              control={control}
+              name='feishu_bot_app_id'
+              rules={{
+                required: 'App ID',
               }}
-              error={!!errors.feishu_bot_app_secret}
-              helperText={errors.feishu_bot_app_secret?.message}
-            />}
-          />
-        </Stack>
-      </>}
-      
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  placeholder='> 飞书开放平台 > 凭证与基础信息 > 应用凭证 > App ID'
+                  onChange={e => {
+                    field.onChange(e.target.value);
+                    setIsEdit(true);
+                  }}
+                  error={!!errors.feishu_bot_app_id}
+                  helperText={errors.feishu_bot_app_id?.message}
+                />
+              )}
+            />
+          </FormItem>
+
+          <FormItem label='App Secret' required>
+            <Controller
+              control={control}
+              name='feishu_bot_app_secret'
+              rules={{
+                required: 'App Secret',
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  placeholder='> 飞书开放平台 > 凭证与基础信息 > 应用凭证 > App Secret'
+                  onChange={e => {
+                    field.onChange(e.target.value);
+                    setIsEdit(true);
+                  }}
+                  error={!!errors.feishu_bot_app_secret}
+                  helperText={errors.feishu_bot_app_secret?.message}
+                />
+              )}
+            />
+          </FormItem>
+        </>
+      )}
+
       {/* <Box sx={{ fontSize: 14, lineHeight: '32px', my: 1 }}>
         用户欢迎语
       </Box>
@@ -175,8 +185,8 @@ const CardRobotFeishu = ({ kb }: { kb: KnowledgeBaseListItem }) => {
           helperText={errors.feishu_bot_welcome_str?.message}
         />}
       /> */}
-    </Stack>
-  </>
-}
+    </SettingCardItem>
+  );
+};
 
-export default CardRobotFeishu
+export default CardRobotFeishu;

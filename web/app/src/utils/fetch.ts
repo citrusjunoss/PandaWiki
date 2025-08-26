@@ -9,6 +9,7 @@ interface SSEClientOptions {
   onError?: SSEErrorCallback;
   onCancel?: SSEErrorCallback;
   onComplete?: SSECompleteCallback;
+  method?: string;
 }
 
 class SSEClient<T> {
@@ -27,7 +28,14 @@ class SSEClient<T> {
   public subscribe(body: BodyInit, onMessage: SSECallback<T>) {
     this.controller.abort();
     this.controller = new AbortController();
-    const { url, headers, onOpen, onError, onComplete } = this.options;
+    const {
+      url,
+      headers,
+      onOpen,
+      onError,
+      onComplete,
+      method = 'POST',
+    } = this.options;
 
     const timeoutDuration = 300000;
     const timeoutId = setTimeout(() => {
@@ -35,17 +43,24 @@ class SSEClient<T> {
       onError?.(new Error('Request timed out after 5 minutes'));
     }, timeoutDuration);
 
+    const upperMethod = method.toUpperCase();
+    const hasBody =
+      upperMethod !== 'GET' &&
+      upperMethod !== 'HEAD' &&
+      body !== undefined &&
+      body !== null;
+
     fetch(url, {
-      method: 'POST',
+      method,
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'text/event-stream',
+        Accept: 'text/event-stream',
+        ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
         ...headers,
       },
-      body,
+      body: hasBody ? body : undefined,
       signal: this.controller.signal,
     })
-      .then(async (response) => {
+      .then(async response => {
         if (!response.ok) {
           clearTimeout(timeoutId);
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -66,11 +81,10 @@ class SSEClient<T> {
             onComplete?.();
             break;
           }
-
           this.processChunk(value, onMessage);
         }
       })
-      .catch((error) => {
+      .catch(error => {
         clearTimeout(timeoutId);
         if (error.name !== 'AbortError') {
           onError?.(error);
@@ -78,12 +92,14 @@ class SSEClient<T> {
       });
   }
 
-  private processChunk(chunk: Uint8Array | undefined, callback: SSECallback<T>) {
+  private processChunk(
+    chunk: Uint8Array | undefined,
+    callback: SSECallback<T>,
+  ) {
     if (!chunk) return;
 
     this.buffer += this.textDecoder.decode(chunk, { stream: true });
     const lines = this.buffer.split('\n');
-
     let currentData = '';
     let isDataLine = false;
 
@@ -101,7 +117,7 @@ class SSEClient<T> {
             const data = JSON.parse(currentData) as T;
             callback(data);
           } catch (error) {
-            console.error(error)
+            console.error(error);
             this.options.onError?.(new Error('Failed to parse SSE data'));
           }
           currentData = '';

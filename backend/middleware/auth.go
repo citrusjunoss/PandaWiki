@@ -6,12 +6,16 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/chaitin/panda-wiki/config"
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/repo/pg"
 )
 
 type AuthMiddleware interface {
 	Authorize(next echo.HandlerFunc) echo.HandlerFunc
+	ValidateUserRole(role consts.UserRole) echo.MiddlewareFunc
+	ValidateKBUserPerm(role consts.UserKBPermission) echo.MiddlewareFunc
+	ValidateLicenseEdition(edition consts.LicenseEdition) echo.MiddlewareFunc
 	MustGetUserID(c echo.Context) (string, bool)
 }
 

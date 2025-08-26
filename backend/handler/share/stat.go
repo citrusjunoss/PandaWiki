@@ -27,7 +27,7 @@ func NewShareStatHandler(baseHandler *handler.BaseHandler, echo *echo.Echo, useC
 	}
 
 	group := echo.Group("/share/v1/stat")
-	group.POST("/page", h.RecordPage)
+	group.POST("/page", h.RecordPage, h.ShareAuthMiddleware.Authorize)
 	return h
 }
 
@@ -51,7 +51,13 @@ func (h *ShareStatHandler) RecordPage(c echo.Context) error {
 	}
 
 	kbID := c.Request().Header.Get("X-KB-ID")
-	userID := ""
+	// get user info --> no enterprise is nil
+	var userIDValue uint
+	userID := c.Get("user_id")
+	if userID != nil { // can find userinfo from auth
+		userIDValue = userID.(uint)
+	}
+
 	ua := c.Request().UserAgent()
 	userAgent := useragent.Parse(ua)
 	browserName := userAgent.Name
@@ -77,7 +83,7 @@ func (h *ShareStatHandler) RecordPage(c echo.Context) error {
 	ip := c.RealIP()
 	stat := &domain.StatPage{
 		KBID:        kbID,
-		UserID:      userID,
+		UserID:      userIDValue,
 		NodeID:      req.NodeID,
 		Scene:       req.Scene,
 		SessionID:   sessionID,

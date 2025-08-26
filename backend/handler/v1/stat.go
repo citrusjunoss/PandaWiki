@@ -3,25 +3,29 @@ package v1
 import (
 	"github.com/labstack/echo/v4"
 
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/handler"
 	"github.com/chaitin/panda-wiki/log"
+	"github.com/chaitin/panda-wiki/middleware"
 	"github.com/chaitin/panda-wiki/usecase"
 )
 
 type StatHandler struct {
 	*handler.BaseHandler
 	usecase *usecase.StatUseCase
+	auth    middleware.AuthMiddleware
 	logger  *log.Logger
 }
 
-func NewStatHandler(baseHandler *handler.BaseHandler, echo *echo.Echo, usecase *usecase.StatUseCase, logger *log.Logger) *StatHandler {
+func NewStatHandler(baseHandler *handler.BaseHandler, echo *echo.Echo, usecase *usecase.StatUseCase, logger *log.Logger, auth middleware.AuthMiddleware) *StatHandler {
 	h := &StatHandler{
 		BaseHandler: baseHandler,
 		usecase:     usecase,
+		auth:        auth,
 		logger:      logger.WithModule("handler.v1.stat"),
 	}
 
-	group := echo.Group("/api/v1/stat")
+	group := echo.Group("/api/v1/stat", h.auth.Authorize, auth.ValidateKBUserPerm(consts.UserKBPermissionDataOperate))
 	group.GET("/hot_pages", h.GetHotPages)
 	group.GET("/referer_hosts", h.GetRefererHosts)
 	group.GET("/browsers", h.GetBrowsers)
@@ -198,7 +202,7 @@ func (h *StatHandler) GetGeoCount(c echo.Context) error {
 //	@Tags			stat
 //	@Accept			json
 //	@Produce		json
-//	@Param			kb_id	query		string true "kb_id"
+//	@Param			kb_id	query		string	true	"kb_id"
 //	@Success		200		{object}	domain.Response
 //	@Router			/api/v1/stat/conversation_distribution [get]
 func (h *StatHandler) GetConversationDistribution(c echo.Context) error {

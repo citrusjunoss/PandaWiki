@@ -15,7 +15,7 @@ type StatPage struct {
 	ID          int64         `json:"id" gorm:"primaryKey;autoIncrement"`
 	KBID        string        `json:"kb_id"`
 	NodeID      string        `json:"node_id"`
-	UserID      string        `json:"user_id"`
+	UserID      uint          `json:"user_id"`
 	SessionID   string        `json:"session_id"`
 	Scene       StatPageScene `json:"scene"` // 1: welcome, 2: detail, 3: chat, 4: login
 	IP          string        `json:"ip"`
@@ -73,6 +73,9 @@ type InstantPageResp struct {
 	IP        string        `json:"ip"`
 	IPAddress IPAddress     `json:"ip_address" gorm:"-"`
 	CreatedAt time.Time     `json:"created_at"`
+
+	UserID uint          `json:"user_id"`
+	Info   *AuthUserInfo `json:"info"`
 }
 
 type ConversationDistributionResp struct {

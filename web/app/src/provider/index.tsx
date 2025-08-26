@@ -1,51 +1,64 @@
-"use client";
+'use client';
 
 import { KBDetail, NodeListItem, WidgetInfo } from '@/assets/type';
 import { useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { GithubComChaitinPandaWikiProApiShareV1AuthInfoResp } from '@/request/pro/types';
 
 interface StoreContextType {
-  widget?: WidgetInfo
-  kbDetail?: KBDetail
-  kb_id?: string
-  catalogShow?: boolean
-  themeMode?: 'light' | 'dark'
-  mobile?: boolean
-  nodeList?: NodeListItem[]
-  token?: string
-  setNodeList?: (list: NodeListItem[]) => void
-  setCatalogShow?: (value: boolean) => void
+  authInfo?: GithubComChaitinPandaWikiProApiShareV1AuthInfoResp;
+  widget?: WidgetInfo;
+  kbDetail?: KBDetail;
+  catalogShow?: boolean;
+  themeMode?: 'light' | 'dark';
+  mobile?: boolean;
+  nodeList?: NodeListItem[];
+  setNodeList?: (list: NodeListItem[]) => void;
+  setCatalogShow?: (value: boolean) => void;
+  catalogWidth?: number;
+  setCatalogWidth?: (value: number) => void;
 }
 
 export const StoreContext = createContext<StoreContextType>({
   widget: undefined,
   kbDetail: undefined,
-  kb_id: undefined,
   catalogShow: undefined,
   themeMode: 'light',
   mobile: false,
   nodeList: undefined,
-  token: undefined,
-  setNodeList: () => { },
-  setCatalogShow: () => { },
-})
+  authInfo: undefined,
+  setNodeList: () => {},
+  setCatalogShow: () => {},
+});
 
 export const useStore = () => useContext(StoreContext);
 
 export default function StoreProvider({
   children,
-  widget,
-  kbDetail,
-  kb_id,
-  themeMode,
-  nodeList: initialNodeList = [],
-  mobile,
-  token,
+  ...props
 }: StoreContextType & { children: React.ReactNode }) {
-  const catalogSettings = kbDetail?.settings?.catalog_settings
-  const [nodeList, setNodeList] = useState<NodeListItem[] | undefined>(initialNodeList);
-  const [catalogShow, setCatalogShow] = useState(catalogSettings?.catalog_visible !== 2);
+  const context = useStore();
+
+  const {
+    widget = context.widget,
+    kbDetail = context.kbDetail,
+    themeMode = context.themeMode,
+    nodeList: initialNodeList = context.nodeList || [],
+    mobile = context.mobile,
+    authInfo = context.authInfo,
+  } = props;
+
+  const catalogSettings = kbDetail?.settings?.catalog_settings;
+  const [catalogWidth, setCatalogWidth] = useState<number>(() => {
+    return catalogSettings?.catalog_width || 260;
+  });
+  const [nodeList, setNodeList] = useState<NodeListItem[] | undefined>(
+    initialNodeList,
+  );
+  const [catalogShow, setCatalogShow] = useState(
+    catalogSettings?.catalog_visible !== 2,
+  );
   const [isMobile, setIsMobile] = useState(mobile);
   const theme = useTheme();
   const mediaQueryResult = useMediaQuery(theme.breakpoints.down('lg'), {
@@ -57,21 +70,36 @@ export default function StoreProvider({
   }, [kbDetail]);
 
   useEffect(() => {
+    const savedWidth = window.localStorage.getItem('CATALOG_WIDTH');
+    if (Number(savedWidth) > 0) {
+      setCatalogWidth(Number(savedWidth));
+    }
+  }, []);
+
+  useEffect(() => {
     setIsMobile(mediaQueryResult);
   }, [mediaQueryResult]);
 
-  return <StoreContext.Provider
-    value={{
-      widget,
-      kbDetail,
-      kb_id,
-      themeMode,
-      nodeList,
-      catalogShow,
-      setCatalogShow,
-      mobile: isMobile,
-      setNodeList,
-      token,
-    }}
-  >{children}</StoreContext.Provider>
+  return (
+    <StoreContext.Provider
+      value={{
+        widget,
+        kbDetail,
+        themeMode,
+        nodeList,
+        catalogShow,
+        setCatalogShow,
+        mobile: isMobile,
+        authInfo,
+        setNodeList,
+        catalogWidth,
+        setCatalogWidth: value => {
+          setCatalogWidth(value);
+          window.localStorage.setItem('CATALOG_WIDTH', value.toString());
+        },
+      }}
+    >
+      {children}
+    </StoreContext.Provider>
+  );
 }

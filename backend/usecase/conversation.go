@@ -20,6 +20,7 @@ type ConversationUsecase struct {
 	geoCacheRepo *cache.GeoRepo
 	logger       *log.Logger
 	ipRepo       *ipdb.IPAddressRepo
+	authRepo     *pg.AuthRepo
 }
 
 func NewConversationUsecase(
@@ -28,12 +29,14 @@ func NewConversationUsecase(
 	geoCacheRepo *cache.GeoRepo,
 	logger *log.Logger,
 	ipRepo *ipdb.IPAddressRepo,
+	authRepo *pg.AuthRepo,
 ) *ConversationUsecase {
 	return &ConversationUsecase{
 		repo:         repo,
 		nodeRepo:     nodeRepo,
 		geoCacheRepo: geoCacheRepo,
 		ipRepo:       ipRepo,
+		authRepo:     authRepo,
 		logger:       logger.WithModule("usecase.conversation"),
 	}
 }
@@ -48,17 +51,28 @@ func (u *ConversationUsecase) GetConversationList(ctx context.Context, request *
 	if err != nil {
 		return nil, err
 	}
-	// get feedbackinfo
+	// get feedback info
 	conversationIDs := make([]string, 0, len(conversations))
+	// get all conversation authID
+	authIDs := make([]uint, 0, len(conversations))
 
 	for _, c := range conversations {
 		conversationIDs = append(conversationIDs, c.ID)
+		// 检查 s_id 是否有效，避免查询无效数据
+		if c.Info.UserInfo.AuthUserID != 0 {
+			authIDs = append(authIDs, c.Info.UserInfo.AuthUserID)
+		}
 	}
 
 	// 遍历拿到的c，去数据库里面搜索最新的用户回复
 	feedbackMap, err := u.repo.GetConversationFeedBackInfoByIDs(ctx, conversationIDs)
 	if err != nil {
 		u.logger.Error("get latest feedback by conversation id failed", log.Error(err))
+	}
+	// get user info according authIDs
+	authMap, err := u.authRepo.GetAuthUserinfoByIDs(ctx, authIDs)
+	if err != nil {
+		u.logger.Error("get user info failed", log.Error(err))
 	}
 
 	// get ip address
@@ -78,13 +92,20 @@ func (u *ConversationUsecase) GetConversationList(ctx context.Context, request *
 		if _, ok := feedbackMap[conversation.ID]; ok {
 			conversation.FeedBackInfo = feedbackMap[conversation.ID]
 		}
+		if _, ok := authMap[conversation.Info.UserInfo.AuthUserID]; ok {
+			conversation.Info.UserInfo = domain.UserInfo{
+				NickName: authMap[conversation.Info.UserInfo.AuthUserID].AuthUserInfo.Username,
+				Avatar:   authMap[conversation.Info.UserInfo.AuthUserID].AuthUserInfo.AvatarUrl,
+				Email:    authMap[conversation.Info.UserInfo.AuthUserID].AuthUserInfo.Email,
+			}
+		}
 		return conversation
 	})
 	return domain.NewPaginatedResult(conversations, total), nil
 }
 
-func (u *ConversationUsecase) GetConversationDetail(ctx context.Context, conversationID string) (*domain.ConversationDetailResp, error) {
-	conversation, err := u.repo.GetConversationDetail(ctx, conversationID)
+func (u *ConversationUsecase) GetConversationDetail(ctx context.Context, kbID, conversationID string) (*domain.ConversationDetailResp, error) {
+	conversation, err := u.repo.GetConversationDetail(ctx, kbID, conversationID)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +188,7 @@ func (u *ConversationUsecase) CreateConversation(ctx context.Context, conversati
 
 func (u *ConversationUsecase) FeedBack(ctx context.Context, feedback *domain.FeedbackRequest) error {
 	// 先查询数据库，看看目前message的信息
-	messages, err := u.repo.GetConversationMessagesDetailByID(ctx, feedback.ConversationId, feedback.MessageId)
+	messages, err := u.repo.GetConversationMessagesDetailByID(ctx, feedback.MessageId)
 	if err != nil {
 		return err
 	}
@@ -183,4 +204,86 @@ func (u *ConversationUsecase) FeedBack(ctx context.Context, feedback *domain.Fee
 		return fmt.Errorf("already voted for this message, please do not vote again")
 	}
 	return nil
+}
+
+func (u *ConversationUsecase) GetMessageList(ctx context.Context, req *domain.MessageListReq) (*domain.PaginatedResult[[]*domain.ConversationMessageListItem], error) {
+	total, messageList, err := u.repo.GetMessageFeedBackList(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	// get auth userinfo --> auth_user_id is not 0
+	authIDs := make([]uint, 0, len(messageList))
+	for _, message := range messageList {
+		if message.ConversationInfo.UserInfo.AuthUserID != 0 {
+			authIDs = append(authIDs, message.ConversationInfo.UserInfo.AuthUserID)
+		}
+	}
+	// get user info according authIDs
+	authMap, err := u.authRepo.GetAuthUserinfoByIDs(ctx, authIDs)
+	if err != nil {
+		u.logger.Error("get user info failed", log.Error(err))
+	}
+
+	// get ip address
+	ipAddressMap := make(map[string]*domain.IPAddress)
+	lo.Map(messageList, func(message *domain.ConversationMessageListItem, _ int) *domain.ConversationMessageListItem {
+		if _, ok := ipAddressMap[message.RemoteIP]; !ok {
+			ipAddress, err := u.ipRepo.GetIPAddress(ctx, message.RemoteIP)
+			if err != nil {
+				u.logger.Error("get ip address failed", log.Error(err), log.String("ip", message.RemoteIP))
+				return message
+			}
+			ipAddressMap[message.RemoteIP] = ipAddress
+			message.IPAddress = ipAddress
+		} else {
+			message.IPAddress = ipAddressMap[message.RemoteIP]
+		}
+		if _, ok := authMap[message.ConversationInfo.UserInfo.AuthUserID]; ok {
+			message.ConversationInfo.UserInfo = domain.UserInfo{
+				NickName: authMap[message.ConversationInfo.UserInfo.AuthUserID].AuthUserInfo.Username,
+				Avatar:   authMap[message.ConversationInfo.UserInfo.AuthUserID].AuthUserInfo.AvatarUrl,
+				Email:    authMap[message.ConversationInfo.UserInfo.AuthUserID].AuthUserInfo.Email,
+			}
+		}
+		return message
+	})
+
+	return domain.NewPaginatedResult(messageList, uint64(total)), nil
+}
+
+func (u *ConversationUsecase) GetMessageDetail(ctx context.Context, kbId, messageId string) (*domain.ConversationMessage, error) {
+	message, err := u.repo.GetConversationMessagesDetailByKbID(ctx, kbId, messageId)
+	if err != nil {
+		return nil, err
+	}
+	return message, nil
+}
+
+func (u *ConversationUsecase) GetShareConversationDetail(ctx context.Context, kbID, conversationID string) (*domain.ShareConversationDetailResp, error) {
+	conversation, err := u.repo.GetConversationDetail(ctx, kbID, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	// get messages
+	messages, err := u.repo.GetConversationMessagesByID(ctx, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	var shareMessages []*domain.ShareConversationMessage
+	for _, message := range messages {
+		shareMessages = append(shareMessages, &domain.ShareConversationMessage{
+			Role:      message.Role,
+			Content:   message.Content,
+			CreatedAt: message.CreatedAt,
+		})
+	}
+	shareConversationDetail := domain.ShareConversationDetailResp{
+		ID:        conversation.ID,
+		Subject:   conversation.Subject,
+		CreatedAt: conversation.CreatedAt,
+
+		Messages: shareMessages,
+	}
+	conversation.Messages = messages
+	return &shareConversationDetail, nil
 }

@@ -6,6 +6,14 @@ import (
 	"github.com/chaitin/panda-wiki/setup"
 )
 
+// @title panda-wiki API
+// @version 1.0
+// @description panda-wiki API documentation
+// @BasePath /
+// @securityDefinitions.apikey	bearerAuth
+// @in	header
+// @name	Authorization
+// @description	Type "Bearer" + a space + your token to authorize
 func main() {
 	app, err := createApp()
 	if err != nil {

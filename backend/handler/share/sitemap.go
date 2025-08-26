@@ -41,7 +41,7 @@ func (h *ShareSitemapHandler) GetSitemap(c echo.Context) error {
 		return h.NewResponseWithError(c, "web app not found", err)
 	}
 	if !appInfo.Settings.AutoSitemap {
-		return h.NewResponseWithError(c, "auto sitemap is not enabled", nil)
+		return h.NewResponseWithError(c, "未开启自动生成站点地图功能", nil)
 	}
 
 	xml, err := h.sitemapUsecase.GetSitemap(c.Request().Context(), kbID)

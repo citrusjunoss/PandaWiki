@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/chaitin/panda-wiki/config"
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/handler"
 	"github.com/chaitin/panda-wiki/log"
@@ -34,7 +35,7 @@ func NewAppHandler(e *echo.Echo, baseHandler *handler.BaseHandler, logger *log.L
 		config:              config,
 	}
 
-	group := e.Group("/api/v1/app", h.auth.Authorize)
+	group := e.Group("/api/v1/app", h.auth.Authorize, h.auth.ValidateKBUserPerm(consts.UserKBPermissionFullControl))
 	group.GET("/detail", h.GetAppDetail)
 	group.PUT("", h.UpdateApp)
 	group.DELETE("", h.DeleteApp)
@@ -49,9 +50,10 @@ func NewAppHandler(e *echo.Echo, baseHandler *handler.BaseHandler, logger *log.L
 //	@Tags			app
 //	@Accept			json
 //	@Produce		json
+//	@Security		bearerAuth
 //	@Param			kb_id	query		string	true	"kb id"
 //	@Param			type	query		string	true	"app type"
-//	@Success		200		{object}	domain.Response{data=domain.AppDetailResp}
+//	@Success		200		{object}	domain.PWResponse{data=domain.AppDetailResp}
 //	@Router			/api/v1/app/detail [get]
 func (h *AppHandler) GetAppDetail(c echo.Context) error {
 	kbID := c.QueryParam("kb_id")
@@ -81,6 +83,8 @@ func (h *AppHandler) GetAppDetail(c echo.Context) error {
 //	@Tags			app
 //	@Accept			json
 //	@Produce		json
+//	@Security		bearerAuth
+//	@Param			id	query		string				true	"id"
 //	@Param			app	body		domain.UpdateAppReq	true	"app"
 //	@Success		200	{object}	domain.Response
 //	@Router			/api/v1/app [put]
@@ -96,6 +100,11 @@ func (h *AppHandler) UpdateApp(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
+	if err := h.usecase.ValidateUpdateApp(ctx, id, &appRequest, consts.GetLicenseEdition(c)); err != nil {
+		h.logger.Error("UpdateApp", log.Any("req:", appRequest), log.Any("err:", err))
+		return h.NewResponseWithErrCode(c, domain.ErrCodePermissionDenied)
+	}
+
 	if err := h.usecase.UpdateApp(ctx, id, &appRequest); err != nil {
 		return h.NewResponseWithError(c, "update app failed", err)
 	}
@@ -109,6 +118,7 @@ func (h *AppHandler) UpdateApp(c echo.Context) error {
 //	@Description	Delete app
 //	@Tags			app
 //	@Accept			json
+//	@Security		bearerAuth
 //	@Param			id	query		string	true	"app id"
 //	@Success		200	{object}	domain.Response
 //	@Router			/api/v1/app [delete]

@@ -35,4 +35,9 @@ var ProviderSet = wire.NewSet(
 	NewFeishuUseCase,
 	NewStatUseCase,
 	NewConfluenceUsecase,
+	NewCommentUsecase,
+	NewYuqueUsecase,
+	NewShiYuanUsecase,
+	NewWechatUsecase,
+	NewWechatAppUsecase,
 )

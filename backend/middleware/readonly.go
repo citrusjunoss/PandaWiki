@@ -37,7 +37,7 @@ func (readonly *ReadOnlyMiddleware) ReadOnly(next echo.HandlerFunc) echo.Handler
 				readonly.logger.Warn("readonly mode rejected request",
 					"method", method,
 					"path", path)
-				return c.JSON(503, domain.Response{
+				return c.JSON(503, domain.PWResponse{
 					Success: false,
 					Message: "API is in read-only mode",
 				})

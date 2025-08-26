@@ -2,16 +2,17 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/chaitin/panda-wiki/config"
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/pkg/bot"
 	"github.com/chaitin/panda-wiki/pkg/bot/dingtalk"
 	"github.com/chaitin/panda-wiki/pkg/bot/discord"
 	"github.com/chaitin/panda-wiki/pkg/bot/feishu"
-	"github.com/chaitin/panda-wiki/pkg/bot/wechat"
 	"github.com/chaitin/panda-wiki/repo/pg"
 )
 
@@ -68,6 +69,26 @@ func NewAppUsecase(
 	return u
 }
 
+func (u *AppUsecase) ValidateUpdateApp(ctx context.Context, id string, req *domain.UpdateAppReq, edition consts.LicenseEdition) error {
+	switch edition {
+	case consts.LicenseEditionEnterprise:
+		return nil
+	case consts.LicenseEditionFree, consts.LicenseEditionContributor:
+		app, err := u.repo.GetAppDetail(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		if app.Settings.WatermarkEnable != req.Settings.WatermarkEnable || app.Settings.WatermarkContent != req.Settings.WatermarkContent {
+			return domain.ErrPermissionDenied
+		}
+	default:
+		return fmt.Errorf("unsupported license type: %d", edition)
+	}
+
+	return nil
+}
+
 func (u *AppUsecase) UpdateApp(ctx context.Context, id string, appRequest *domain.UpdateAppReq) error {
 	if err := u.repo.UpdateApp(ctx, id, appRequest); err != nil {
 		return err
@@ -103,6 +124,26 @@ func (u *AppUsecase) getQAFunc(kbID string, appType domain.AppType) bot.GetQAFun
 		if err != nil {
 			return nil, err
 		}
+		// check ai feedback. --> default is open
+		appinfo, err := u.GetAppDetailByKBIDAndAppType(ctx, kbID, domain.AppTypeWeb)
+		if err != nil {
+			u.logger.Error("wechat GetAppDetailByKBIDAndAppType failed", log.Error(err))
+		}
+
+		var feedback = "\n\n---  \n\n本回答由 PandaWiki 基于 AI 生成，仅供参考。\n[👍 满意](%s) | [👎 不满意](%s)"
+		var likeUrl = "%s/feedback?score=1&message_id=%s"
+		var dislikeUrl = "%s/feedback?score=-1&message_id=%s"
+		var messageId string
+		var kb *domain.KnowledgeBase
+
+		if appinfo.Settings.AIFeedbackSettings.AIFeedbackIsEnabled == nil || *appinfo.Settings.AIFeedbackSettings.AIFeedbackIsEnabled { // open
+			kb, err = u.chatUsecase.llmUsecase.kbRepo.GetKnowledgeBaseByID(ctx, kbID)
+			if err != nil {
+				u.logger.Error("wechat GetKnowledgeBaseByID failed", log.Error(err))
+			}
+
+		}
+
 		contentCh := make(chan string, 10)
 		go func() {
 			defer close(contentCh)
@@ -113,40 +154,17 @@ func (u *AppUsecase) getQAFunc(kbID string, appType domain.AppType) bot.GetQAFun
 				if event.Type == "data" {
 					contentCh <- event.Content
 				}
+				if event.Type == "message_id" {
+					messageId = event.Content
+				}
 			}
-		}()
-		return contentCh, nil
-	}
-}
-
-func (u *AppUsecase) wechatQAFunc(kbID string, appType domain.AppType, remoteip string, userinfo *wechat.UserInfo) func(ctx context.Context, msg string) (chan string, error) {
-	return func(ctx context.Context, msg string) (chan string, error) {
-		eventCh, err := u.chatUsecase.Chat(ctx, &domain.ChatRequest{
-			Message:  msg,
-			KBID:     kbID,
-			AppType:  appType,
-			RemoteIP: remoteip,
-			Info: domain.ConversationInfo{
-				UserInfo: domain.UserInfo{
-					UserID:   userinfo.UserID,
-					NickName: userinfo.Name,
-					From:     domain.MessageFromPrivate,
-				},
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
-		contentCh := make(chan string, 10)
-		go func() {
-			defer close(contentCh)
-			for event := range eventCh { // get content from eventch
-				if event.Type == "done" || event.Type == "error" {
-					break
-				}
-				if event.Type == "data" {
-					contentCh <- event.Content
-				}
+			// check again
+			// contact --> send
+			if kb != nil && (appinfo.Settings.AIFeedbackSettings.AIFeedbackIsEnabled == nil || *appinfo.Settings.AIFeedbackSettings.AIFeedbackIsEnabled) { // open
+				like := fmt.Sprintf(likeUrl, kb.AccessSettings.BaseURL, messageId)
+				dislike := fmt.Sprintf(dislikeUrl, kb.AccessSettings.BaseURL, messageId)
+				feedback_data := fmt.Sprintf(feedback, like, dislike)
+				contentCh <- feedback_data
 			}
 		}()
 		return contentCh, nil
@@ -244,7 +262,9 @@ func (u *AppUsecase) updateDisCordBot(app *domain.App) {
 
 	if bot, exists := u.discordBots[app.ID]; exists {
 		if bot != nil {
-			bot.Stop()
+			if err := bot.Stop(); err != nil {
+				u.logger.Error("failed to stop discord bot", log.Error(err))
+			}
 			delete(u.discordBots, app.ID)
 		}
 	}
@@ -325,6 +345,12 @@ func (u *AppUsecase) GetAppDetailByKBIDAndAppType(ctx context.Context, kbID stri
 		// Discord
 		DiscordBotIsEnabled: app.Settings.DiscordBotIsEnabled,
 		DiscordBotToken:     app.Settings.DiscordBotToken,
+		// WechatOfficialAccount
+		WechatOfficialAccountIsEnabled:      app.Settings.WechatOfficialAccountIsEnabled,
+		WechatOfficialAccountAppID:          app.Settings.WechatOfficialAccountAppID,
+		WechatOfficialAccountAppSecret:      app.Settings.WechatOfficialAccountAppSecret,
+		WechatOfficialAccountToken:          app.Settings.WechatOfficialAccountToken,
+		WechatOfficialAccountEncodingAESKey: app.Settings.WechatOfficialAccountEncodingAESKey,
 		// theme
 		ThemeMode:     app.Settings.ThemeMode,
 		ThemeAndStyle: app.Settings.ThemeAndStyle,
@@ -334,7 +360,23 @@ func (u *AppUsecase) GetAppDetailByKBIDAndAppType(ctx context.Context, kbID stri
 		FooterSettings: app.Settings.FooterSettings,
 		// widget bot settings
 		WidgetBotSettings: app.Settings.WidgetBotSettings,
+		// webapp comment settings
+		WebAppCommentSettings: app.Settings.WebAppCommentSettings,
+		// document feedback
+		DocumentFeedBackIsEnabled: app.Settings.DocumentFeedBackIsEnabled,
+		// AI Feedback
+		AIFeedbackSettings: app.Settings.AIFeedbackSettings,
+		// WebApp Custom Settings
+		WebAppCustomSettings: app.Settings.WebAppCustomSettings,
+
+		WatermarkEnable:  app.Settings.WatermarkEnable,
+		WatermarkContent: app.Settings.WatermarkContent,
 	}
+	// init ai feedback string
+	if app.Settings.AIFeedbackSettings.AIFeedbackType == nil {
+		appDetailResp.Settings.AIFeedbackSettings.AIFeedbackType = []string{"内容不准确", "没有帮助", "其他"}
+	}
+
 	if len(app.Settings.RecommendNodeIDs) > 0 {
 		nodes, err := u.nodeUsecase.GetRecommendNodeList(ctx, &domain.GetRecommendNodeListReq{
 			KBID:    kbID,
@@ -375,8 +417,24 @@ func (u *AppUsecase) GetWebAppInfo(ctx context.Context, kbID string) (*domain.Ap
 			CatalogSettings: app.Settings.CatalogSettings,
 			// footer settings
 			FooterSettings: app.Settings.FooterSettings,
+			// widget bot settings
+			WebAppCommentSettings: app.Settings.WebAppCommentSettings,
+			// document feedback
+			DocumentFeedBackIsEnabled: app.Settings.DocumentFeedBackIsEnabled,
+			// AI Feedback
+			AIFeedbackSettings: app.Settings.AIFeedbackSettings,
+			// WebApp Custom Settings
+			WebAppCustomSettings: app.Settings.WebAppCustomSettings,
+
+			WatermarkContent: app.Settings.WatermarkContent,
+			WatermarkEnable:  app.Settings.WatermarkEnable,
 		},
 	}
+	// init ai feedback string
+	if app.Settings.AIFeedbackSettings.AIFeedbackType == nil {
+		appInfo.Settings.AIFeedbackSettings.AIFeedbackType = []string{"内容不准确", "没有帮助", "其他"}
+	}
+
 	if len(app.Settings.RecommendNodeIDs) > 0 {
 		nodes, err := u.nodeUsecase.GetRecommendNodeList(ctx, &domain.GetRecommendNodeListReq{
 			KBID:    kbID,

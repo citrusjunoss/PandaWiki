@@ -1,49 +1,48 @@
-import { apiClient } from "@/api";
-import { formatMeta } from "@/utils";
-import Doc from "@/views/node";
-import { ResolvingMetadata } from "next";
-import { cookies, headers } from "next/headers";
+import { getShareV1AppWebInfo } from '@/request/ShareApp';
+import { getShareV1NodeDetail } from '@/request/ShareNode';
+import { formatMeta } from '@/utils';
+import Doc from '@/views/node';
+import { ResolvingMetadata } from 'next';
 
 export interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata(
   { params }: PageProps,
-  parent: ResolvingMetadata
+  parent: ResolvingMetadata,
 ) {
   const { id } = await params;
-  const headersList = await headers();
-  const kb_id = headersList.get('x-kb-id') || process.env.DEV_KB_ID || '';
-  const cookieStore = await cookies()
-  const authToken = cookieStore.get(`auth_${kb_id}`)?.value || '';
-  const node = await getNodeDetail(id, kb_id, authToken);
+  let node = {
+    name: '无权访问',
+    meta: {
+      summary: '无权访问',
+    },
+  };
+  try {
+    // @ts-ignore
+    node = (await getShareV1NodeDetail({ id })) as any;
+  } catch (error) {
+    console.log(error);
+  }
+
   return await formatMeta(
-    { title: node?.name },
-    parent
+    { title: node?.name, description: node?.meta?.summary },
+    parent,
   );
 }
 
-async function getNodeDetail(id: string, kb_id: string, authToken: string) {
-  const result = await apiClient.serverGetNodeDetail(id, kb_id, authToken);
-  if (result.error) {
-    console.error('ss Error fetching document content:', result.error);
-    return undefined;
-  }
-  return result.data;
-}
-
 const DocPage = async ({ params }: PageProps) => {
-  const { id = '' } = await params
-
-  const headersList = await headers()
-  const cookieStore = await cookies()
-  const kb_id = headersList.get('x-kb-id') || process.env.DEV_KB_ID || ''
-  const authToken = cookieStore.get(`auth_${kb_id}`)?.value || '';
-
-  const node = await getNodeDetail(id, kb_id, authToken)
-
-  return <Doc node={node} token={authToken} />
+  const { id = '' } = await params;
+  const kbInfo: any = await getShareV1AppWebInfo();
+  let node: any = {};
+  try {
+    // @ts-ignore
+    node = (await getShareV1NodeDetail({ id })) as any;
+  } catch (error: any) {
+    node = error.data;
+  }
+  return <Doc node={node} kbInfo={kbInfo} commentList={[]} />;
 };
 
 export default DocPage;

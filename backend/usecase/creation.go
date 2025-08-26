@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	modelkit "github.com/chaitin/ModelKit/usecase"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/cloudwego/eino/schema"
@@ -29,10 +30,16 @@ func (u *CreationUsecase) TextCreation(ctx context.Context, req *domain.TextReq,
 		u.logger.Error("get chat model failed", log.Error(err))
 		return domain.ErrModelNotConfigured
 	}
-	chatModel, err := u.llm.GetChatModel(ctx, model)
+
+	modelkitModel, err := model.ToModelkitModel()
+	if err != nil {
+		return fmt.Errorf("failed to convert model to modelkit model: %w", err)
+	}
+	chatModel, err := modelkit.GetChatModel(ctx, modelkitModel)
 	if err != nil {
 		return fmt.Errorf("get chat model failed: %w", err)
 	}
+
 	messages := []*schema.Message{
 		{
 			Role: "system",

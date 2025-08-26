@@ -3,6 +3,7 @@ package share
 import (
 	"github.com/labstack/echo/v4"
 
+	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/handler"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/usecase"
@@ -27,7 +28,7 @@ func NewShareNodeHandler(
 	}
 
 	group := echo.Group("share/v1/node",
-		h.BaseHandler.ShareAuthMiddleware.Authorize,
+		h.ShareAuthMiddleware.Authorize,
 	)
 	group.GET("/list", h.GetNodeList)
 	group.GET("/detail", h.GetNodeDetail)
@@ -51,7 +52,7 @@ func (h *ShareNodeHandler) GetNodeList(c echo.Context) error {
 		return h.NewResponseWithError(c, "kb_id is required", nil)
 	}
 
-	nodes, err := h.usecase.GetNodeReleaseListByKBID(c.Request().Context(), kbID)
+	nodes, err := h.usecase.GetNodeReleaseListByKBID(c.Request().Context(), kbID, domain.GetAuthID(c))
 	if err != nil {
 		return h.NewResponseWithError(c, "failed to get node list", err)
 	}
@@ -68,6 +69,7 @@ func (h *ShareNodeHandler) GetNodeList(c echo.Context) error {
 //	@Produce		json
 //	@Param			X-KB-ID	header		string	true	"kb id"
 //	@Param			id		query		string	true	"node id"
+//	@Param			format	query		string	true	"format"
 //	@Success		200		{object}	domain.Response
 //	@Router			/share/v1/node/detail [get]
 func (h *ShareNodeHandler) GetNodeDetail(c echo.Context) error {
@@ -80,7 +82,11 @@ func (h *ShareNodeHandler) GetNodeDetail(c echo.Context) error {
 		return h.NewResponseWithError(c, "id is required", nil)
 	}
 
-	node, err := h.usecase.GetNodeReleaseDetailByKBIDAndID(c.Request().Context(), kbID, id)
+	if err := h.usecase.ValidateNodePerm(c.Request().Context(), kbID, id, domain.GetAuthID(c)); err != nil {
+		return h.NewResponseWithErrCode(c, domain.ErrCodePermissionDenied)
+	}
+
+	node, err := h.usecase.GetNodeReleaseDetailByKBIDAndID(c.Request().Context(), kbID, id, c.QueryParam("format"))
 	if err != nil {
 		return h.NewResponseWithError(c, "failed to get node detail", err)
 	}

@@ -6,4 +6,5 @@ var ProviderSet = wire.NewSet(
 	NewAuthMiddleware,
 	NewShareAuthMiddleware,
 	NewReadonlyMiddleware,
+	NewSessionMiddleware,
 )

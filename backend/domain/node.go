@@ -6,10 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/lib/pq"
+
+	"github.com/chaitin/panda-wiki/consts"
 )
 
 const (
-	MaxPosition float64 = 1e38
+	MaxPosition    float64 = 1e38
+	MinPositionGap float64 = 1e-5
 )
 
 type NodeType uint16
@@ -26,13 +31,6 @@ const (
 	NodeStatusReleased NodeStatus = 2
 )
 
-type NodeVisibility uint16
-
-const (
-	NodeVisibilityPrivate NodeVisibility = 1
-	NodeVisibilityPublic  NodeVisibility = 2
-)
-
 // table: nodes
 type Node struct {
 	ID string `json:"id" gorm:"primaryKey"`
@@ -41,8 +39,7 @@ type Node struct {
 
 	Type NodeType `json:"type"`
 
-	Status     NodeStatus     `json:"status"`
-	Visibility NodeVisibility `json:"visibility"`
+	Status NodeStatus `json:"status"`
 
 	Name    string   `json:"name"`
 	Content string   `json:"content"`
@@ -51,10 +48,54 @@ type Node struct {
 	ParentID string  `json:"parent_id"`
 	Position float64 `json:"position"`
 
-	DocID string `json:"doc_id"` // DEPRECATED: for rag service
+	DocID     string    `json:"doc_id"` // DEPRECATED: for rag service
+	CreatorId string    `json:"creator_id"`
+	EditorId  string    `json:"editor_id"`
+	EditTime  time.Time `json:"edit_time"`
+
+	Permissions NodePermissions `json:"permissions" gorm:"type:jsonb"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type NodePermissions struct {
+	Answerable consts.NodeAccessPerm `json:"answerable"` // 可被问答
+	Visitable  consts.NodeAccessPerm `json:"visitable"`  // 可被访问
+	Visible    consts.NodeAccessPerm `json:"visible"`    // 导航内可见
+}
+
+func (s *NodePermissions) Scan(value any) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New(fmt.Sprint("invalid permissions type:", value))
+	}
+	return json.Unmarshal(bytes, s)
+}
+
+func (s *NodePermissions) Value() (driver.Value, error) {
+	return json.Marshal(s)
+}
+
+type NodeAuthGroup struct {
+	ID          uint                `json:"id"`
+	NodeID      string              `json:"node_id" `
+	AuthGroupID int                 `json:"auth_group_id"`
+	Perm        consts.NodePermName `json:"perm"`
+	CreatedAt   time.Time           `json:"created_at"`
+}
+
+func (NodeAuthGroup) TableName() string {
+	return "node_auth_groups"
+}
+
+type NodeGroupDetail struct {
+	NodeID      string              `json:"node_id" `
+	AuthGroupId int                 `json:"auth_group_id"`
+	Perm        consts.NodePermName `json:"perm"`
+	Name        string              `json:"name" gorm:"uniqueIndex;size:100;not null"`
+	KbID        string              `gorm:"column:kb_id;not null" json:"kb_id,omitempty"`
+	AuthIDs     pq.Int64Array       `json:"auth_ids" gorm:"type:int[]"`
 }
 
 type NodeMeta struct {
@@ -82,8 +123,11 @@ type CreateNodeReq struct {
 	Name    string `json:"name" validate:"required"`
 	Content string `json:"content"`
 
-	Emoji      string          `json:"emoji"`
-	Visibility *NodeVisibility `json:"visibility"`
+	Emoji string `json:"emoji"`
+
+	MaxNode int `json:"-"`
+
+	Position *float64 `json:"position"`
 }
 
 type GetNodeListReq struct {
@@ -92,34 +136,21 @@ type GetNodeListReq struct {
 }
 
 type NodeListItemResp struct {
-	ID         string         `json:"id"`
-	Type       NodeType       `json:"type"`
-	Status     NodeStatus     `json:"status"`
-	Visibility NodeVisibility `json:"visibility"`
-	Name       string         `json:"name"`
-	Summary    string         `json:"summary"`
-	Emoji      string         `json:"emoji"`
-	Position   float64        `json:"position"`
-	ParentID   string         `json:"parent_id"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-}
-
-type NodeDetailResp struct {
-	ID   string `json:"id"`
-	KBID string `json:"kb_id"`
-
-	Type       NodeType       `json:"type"`
-	Status     NodeStatus     `json:"status"`
-	Visibility NodeVisibility `json:"visibility"`
-	Name       string         `json:"name"`
-	Content    string         `json:"content"`
-	Meta       NodeMeta       `json:"meta"`
-
-	ParentID string `json:"parent_id"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          string          `json:"id"`
+	Type        NodeType        `json:"type"`
+	Status      NodeStatus      `json:"status"`
+	Name        string          `json:"name"`
+	Summary     string          `json:"summary"`
+	Emoji       string          `json:"emoji"`
+	Position    float64         `json:"position"`
+	ParentID    string          `json:"parent_id"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+	CreatorId   string          `json:"creator_id"`
+	EditorId    string          `json:"editor_id"`
+	Creator     string          `json:"creator"`
+	Editor      string          `json:"editor"`
+	Permissions NodePermissions `json:"permissions" gorm:"type:jsonb"`
 }
 
 type NodeContentChunk struct {
@@ -150,7 +181,7 @@ type ChunkListItemResp struct {
 	Content string `json:"content"`
 }
 
-type NodeCotentChunkSSE struct {
+type NodeContentChunkSSE struct {
 	NodeID  string `json:"node_id"`
 	Name    string `json:"name"`
 	Summary string `json:"summary"`
@@ -170,27 +201,28 @@ type RecommendNodeListResp struct {
 type NodeActionReq struct {
 	IDs    []string `json:"ids" validate:"required"`
 	KBID   string   `json:"kb_id" validate:"required"`
-	Action string   `json:"action" validate:"required,oneof=delete private public"`
+	Action string   `json:"action" validate:"required,oneof=delete"`
 }
 
 type UpdateNodeReq struct {
-	ID         string          `json:"id" validate:"required"`
-	KBID       string          `json:"kb_id" validate:"required"`
-	Name       *string         `json:"name"`
-	Content    *string         `json:"content"`
-	Emoji      *string         `json:"emoji"`
-	Visibility *NodeVisibility `json:"visibility"`
-	Summary    *string         `json:"summary"`
+	ID       string   `json:"id" validate:"required"`
+	KBID     string   `json:"kb_id" validate:"required"`
+	Name     *string  `json:"name"`
+	Content  *string  `json:"content"`
+	Emoji    *string  `json:"emoji"`
+	Summary  *string  `json:"summary"`
+	Position *float64 `json:"position"`
 }
 
 type ShareNodeListItemResp struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Type      NodeType  `json:"type"`
-	ParentID  string    `json:"parent_id"`
-	Position  float64   `json:"position"`
-	Emoji     string    `json:"emoji"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	Type        NodeType        `json:"type"`
+	ParentID    string          `json:"parent_id"`
+	Position    float64         `json:"position"`
+	Emoji       string          `json:"emoji"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+	Permissions NodePermissions `json:"permissions" gorm:"type:jsonb"`
 }
 
 func (n *ShareNodeListItemResp) GetURL(baseURL string) string {
@@ -221,8 +253,7 @@ type NodeRelease struct {
 	NodeID string `json:"node_id" gorm:"index"`
 	DocID  string `json:"doc_id" gorm:"index"` // for rag service
 
-	Type       NodeType       `json:"type"`
-	Visibility NodeVisibility `json:"visibility"`
+	Type NodeType `json:"type"`
 
 	Name    string   `json:"name"`
 	Meta    NodeMeta `json:"meta" gorm:"type:jsonb"`

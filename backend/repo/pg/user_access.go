@@ -1,11 +1,13 @@
 package pg
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"gorm.io/gorm"
 
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/store/pg"
@@ -99,4 +101,47 @@ func (r *UserAccessRepository) syncToDatabase() {
 
 	r.logger.Info("synced user access time to database",
 		log.Int("update_count", len(updates)))
+}
+
+func (r *UserAccessRepository) ValidateRole(userID string, role consts.UserRole) (bool, error) {
+	var user domain.User
+	if err := r.db.Model(&domain.User{}).Where("id = ?", userID).First(&user).Error; err != nil {
+		return false, fmt.Errorf("get user failed")
+	}
+
+	if user.Role == consts.UserRoleAdmin {
+		return true, nil
+	}
+
+	if user.Role == role {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (r *UserAccessRepository) ValidateKBPerm(kbId, userId string, perm consts.UserKBPermission) (bool, error) {
+	var user domain.User
+	if err := r.db.Model(&domain.User{}).Where("id = ?", userId).First(&user).Error; err != nil {
+		return false, fmt.Errorf("get user failed %s", err)
+	}
+
+	if user.Role == consts.UserRoleAdmin {
+		return true, nil
+	}
+
+	var kbUser domain.KBUsers
+	err := r.db.Model(&domain.KBUsers{}).
+		Where("kb_id = ? AND user_id = ?", kbId, userId).
+		First(&kbUser).Error
+	if err != nil {
+		return false, fmt.Errorf("get kb user failed %s", err)
+
+	}
+
+	if kbUser.Perm == perm || kbUser.Perm == consts.UserKBPermissionFullControl {
+		return true, nil
+	}
+
+	return false, nil
 }

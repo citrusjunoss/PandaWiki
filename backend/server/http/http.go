@@ -33,7 +33,13 @@ func (v *echoValidator) Validate(i any) error {
 	return nil
 }
 
-func NewEcho(logger *log.Logger, config *config.Config, pwMiddleware *PWMiddleware.ReadOnlyMiddleware) *echo.Echo {
+func NewEcho(
+	logger *log.Logger,
+	config *config.Config,
+	pwMiddleware *PWMiddleware.ReadOnlyMiddleware,
+	sessionMiddleware *PWMiddleware.SessionMiddleware,
+) *echo.Echo {
+
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
@@ -87,6 +93,7 @@ func NewEcho(logger *log.Logger, config *config.Config, pwMiddleware *PWMiddlewa
 	}))
 
 	e.Use(pwMiddleware.ReadOnly)
+	e.Use(sessionMiddleware.Session())
 
 	return e
 }

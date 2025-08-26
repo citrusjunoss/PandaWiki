@@ -1,12 +1,135 @@
+basePath: /
 definitions:
+  consts.AuthType:
+    enum:
+    - ""
+    - simple
+    - enterprise
+    type: string
+    x-enum-comments:
+      AuthTypeEnterprise: 企业认证
+      AuthTypeNull: 无认证
+      AuthTypeSimple: 简单口令
+    x-enum-descriptions:
+    - 无认证
+    - 简单口令
+    - 企业认证
+    x-enum-varnames:
+    - AuthTypeNull
+    - AuthTypeSimple
+    - AuthTypeEnterprise
+  consts.NodeAccessPerm:
+    enum:
+    - open
+    - partial
+    - closed
+    type: string
+    x-enum-comments:
+      NodeAccessPermClosed: 完全禁止
+      NodeAccessPermOpen: 完全开放
+      NodeAccessPermPartial: 部分开放
+    x-enum-descriptions:
+    - 完全开放
+    - 部分开放
+    - 完全禁止
+    x-enum-varnames:
+    - NodeAccessPermOpen
+    - NodeAccessPermPartial
+    - NodeAccessPermClosed
+  consts.NodePermName:
+    enum:
+    - visible
+    - visitable
+    - answerable
+    type: string
+    x-enum-comments:
+      NodePermNameAnswerable: 可被问答
+      NodePermNameVisible: 导航内可见
+      NodePermNameVisitable: 可被访问
+    x-enum-descriptions:
+    - 导航内可见
+    - 可被访问
+    - 可被问答
+    x-enum-varnames:
+    - NodePermNameVisible
+    - NodePermNameVisitable
+    - NodePermNameAnswerable
+  consts.SourceType:
+    enum:
+    - dingtalk
+    - feishu
+    - wecom
+    - oauth
+    - github
+    - cas
+    - ldap
+    type: string
+    x-enum-varnames:
+    - SourceTypeDingTalk
+    - SourceTypeFeishu
+    - SourceTypeWeCom
+    - SourceTypeOAuth
+    - SourceTypeGitHub
+    - SourceTypeCAS
+    - SourceTypeLDAP
+  consts.UserKBPermission:
+    enum:
+    - ""
+    - full_control
+    - doc_manage
+    - data_operate
+    type: string
+    x-enum-comments:
+      UserKBPermissionDataOperate: 数据运营
+      UserKBPermissionDocManage: 文档管理
+      UserKBPermissionFullControl: 完全控制
+      UserKBPermissionNull: 无权限
+    x-enum-descriptions:
+    - 无权限
+    - 完全控制
+    - 文档管理
+    - 数据运营
+    x-enum-varnames:
+    - UserKBPermissionNull
+    - UserKBPermissionFullControl
+    - UserKBPermissionDocManage
+    - UserKBPermissionDataOperate
+  consts.UserRole:
+    enum:
+    - admin
+    - user
+    type: string
+    x-enum-comments:
+      UserRoleAdmin: 管理员
+      UserRoleUser: 普通用户
+    x-enum-descriptions:
+    - 管理员
+    - 普通用户
+    x-enum-varnames:
+    - UserRoleAdmin
+    - UserRoleUser
+  domain.AIFeedbackSettings:
+    properties:
+      ai_feedback_type:
+        items:
+          type: string
+        type: array
+      is_enabled:
+        type: boolean
+    type: object
   domain.AccessSettings:
     properties:
       base_url:
         type: string
+      enterprise_auth:
+        $ref: '#/definitions/domain.EnterpriseAuth'
       hosts:
         items:
           type: string
         type: array
+      is_forbidden:
+        description: 禁止访问
+        type: boolean
       ports:
         items:
           type: integer
@@ -17,6 +140,10 @@ definitions:
         type: string
       simple_auth:
         $ref: '#/definitions/domain.SimpleAuth'
+      source_type:
+        allOf:
+        - $ref: '#/definitions/consts.SourceType'
+        description: 企业认证来源
       ssl_ports:
         items:
           type: integer
@@ -54,6 +181,10 @@ definitions:
     type: object
   domain.AppSettings:
     properties:
+      ai_feedback_settings:
+        allOf:
+        - $ref: '#/definitions/domain.AIFeedbackSettings'
+        description: AI feedback
       auto_sitemap:
         type: boolean
       body_code:
@@ -82,6 +213,9 @@ definitions:
         type: boolean
       discord_bot_token:
         type: string
+      document_feedback_is_enabled:
+        description: document feedback
+        type: boolean
       feishu_bot_app_id:
         type: string
       feishu_bot_app_secret:
@@ -118,6 +252,18 @@ definitions:
       title:
         description: nav
         type: string
+      watermark_content:
+        type: string
+      watermark_enable:
+        type: boolean
+      web_app_comment_settings:
+        allOf:
+        - $ref: '#/definitions/domain.WebAppCommentSettings'
+        description: webapp comment settings
+      web_app_custom_style:
+        allOf:
+        - $ref: '#/definitions/domain.WebAppCustomSettings'
+        description: WebAppCustomStyle
       wechat_app_agent_id:
         type: string
       wechat_app_corpid:
@@ -130,6 +276,17 @@ definitions:
       wechat_app_secret:
         type: string
       wechat_app_token:
+        type: string
+      wechat_official_account_app_id:
+        type: string
+      wechat_official_account_app_secret:
+        type: string
+      wechat_official_account_encodingaeskey:
+        type: string
+      wechat_official_account_is_enabled:
+        description: WechatOfficialAccount
+        type: boolean
+      wechat_official_account_token:
         type: string
       wechat_service_corpid:
         type: string
@@ -152,6 +309,10 @@ definitions:
     type: object
   domain.AppSettingsResp:
     properties:
+      ai_feedback_settings:
+        allOf:
+        - $ref: '#/definitions/domain.AIFeedbackSettings'
+        description: AI feedback
       auto_sitemap:
         type: boolean
       body_code:
@@ -180,6 +341,9 @@ definitions:
         type: boolean
       discord_bot_token:
         type: string
+      document_feedback_is_enabled:
+        description: document feedback
+        type: boolean
       feishu_bot_app_id:
         type: string
       feishu_bot_app_secret:
@@ -216,6 +380,18 @@ definitions:
       title:
         description: nav
         type: string
+      watermark_content:
+        type: string
+      watermark_enable:
+        type: boolean
+      web_app_comment_settings:
+        allOf:
+        - $ref: '#/definitions/domain.WebAppCommentSettings'
+        description: webapp comment settings
+      web_app_custom_style:
+        allOf:
+        - $ref: '#/definitions/domain.WebAppCustomSettings'
+        description: WebAppCustomStyle
       wechat_app_agent_id:
         type: string
       wechat_app_corpid:
@@ -228,6 +404,17 @@ definitions:
       wechat_app_secret:
         type: string
       wechat_app_token:
+        type: string
+      wechat_official_account_app_id:
+        type: string
+      wechat_official_account_app_secret:
+        type: string
+      wechat_official_account_encodingaeskey:
+        type: string
+      wechat_official_account_is_enabled:
+        description: WechatOfficialAccount
+        type: boolean
+      wechat_official_account_token:
         type: string
       wechat_service_corpid:
         type: string
@@ -257,6 +444,8 @@ definitions:
     - 5
     - 6
     - 7
+    - 8
+    format: int32
     type: integer
     x-enum-varnames:
     - AppTypeWeb
@@ -266,6 +455,7 @@ definitions:
     - AppTypeWechatBot
     - AppTypeWechatServiceBot
     - AppTypeDisCordBot
+    - AppTypeWechatOfficialAccount
   domain.BatchMoveReq:
     properties:
       ids:
@@ -319,54 +509,75 @@ definitions:
     - app_type
     - message
     type: object
-  domain.CheckModelReq:
+  domain.CommentInfo:
     properties:
-      api_header:
+      auth_user_id:
+        type: integer
+      avatar:
+        description: avatar
         type: string
-      api_key:
+      email:
         type: string
-      api_version:
-        description: for azure openai
+      remote_ip:
         type: string
-      base_url:
+      user_name:
         type: string
-      model:
-        type: string
-      provider:
-        allOf:
-        - $ref: '#/definitions/domain.ModelProvider'
-        enum:
-        - OpenAI
-        - Ollama
-        - DeepSeek
-        - SiliconFlow
-        - Moonshot
-        - Other
-        - AzureOpenAI
-        - BaiZhiCloud
-        - Hunyuan
-        - BaiLian
-        - Volcengine
-      type:
-        allOf:
-        - $ref: '#/definitions/domain.ModelType'
-        enum:
-        - chat
-        - embedding
-        - rerank
-    required:
-    - base_url
-    - model
-    - provider
-    - type
     type: object
-  domain.CheckModelResp:
+  domain.CommentListItem:
     properties:
       content:
         type: string
-      error:
+      created_at:
         type: string
+      id:
+        type: string
+      info:
+        $ref: '#/definitions/domain.CommentInfo'
+      ip_address:
+        allOf:
+        - $ref: '#/definitions/domain.IPAddress'
+        description: ip地址
+      node_id:
+        type: string
+      node_name:
+        description: 文档标题
+        type: string
+      node_type:
+        type: integer
+      root_id:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.CommentStatus'
+        description: 'status : -1 reject 0 pending 1 accept'
     type: object
+  domain.CommentReq:
+    properties:
+      content:
+        type: string
+      node_id:
+        type: string
+      parent_id:
+        type: string
+      root_id:
+        type: string
+      user_name:
+        type: string
+    required:
+    - content
+    - node_id
+    type: object
+  domain.CommentStatus:
+    enum:
+    - -1
+    - 0
+    - 1
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - CommentStatusReject
+    - CommentStatusPending
+    - CommentStatusAccepted
   domain.ConversationDetailResp:
     properties:
       app_id:
@@ -438,13 +649,18 @@ definitions:
         allOf:
         - $ref: '#/definitions/domain.FeedBackInfo'
         description: feedbackinfo
+      kb_id:
+        type: string
       model:
+        type: string
+      parent_id:
+        description: parent_id
         type: string
       prompt_tokens:
         type: integer
       provider:
         allOf:
-        - $ref: '#/definitions/domain.ModelProvider'
+        - $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider'
         description: model
       remote_ip:
         description: stats
@@ -453,6 +669,34 @@ definitions:
         $ref: '#/definitions/schema.RoleType'
       total_tokens:
         type: integer
+    type: object
+  domain.ConversationMessageListItem:
+    properties:
+      app_id:
+        type: string
+      app_type:
+        $ref: '#/definitions/domain.AppType'
+      conversation_id:
+        type: string
+      conversation_info:
+        allOf:
+        - $ref: '#/definitions/domain.ConversationInfo'
+        description: userInfo
+      created_at:
+        type: string
+      id:
+        type: string
+      info:
+        allOf:
+        - $ref: '#/definitions/domain.FeedBackInfo'
+        description: feedbackInfo
+      ip_address:
+        $ref: '#/definitions/domain.IPAddress'
+      question:
+        type: string
+      remote_ip:
+        description: stats
+        type: string
     type: object
   domain.ConversationReference:
     properties:
@@ -521,21 +765,10 @@ definitions:
         type: string
       model:
         type: string
+      param:
+        $ref: '#/definitions/domain.ModelParam'
       provider:
-        allOf:
-        - $ref: '#/definitions/domain.ModelProvider'
-        enum:
-        - OpenAI
-        - Ollama
-        - DeepSeek
-        - SiliconFlow
-        - Moonshot
-        - Other
-        - AzureOpenAI
-        - BaiZhiCloud
-        - Hunyuan
-        - BaiLian
-        - Volcengine
+        $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider'
       type:
         allOf:
         - $ref: '#/definitions/domain.ModelType'
@@ -561,36 +794,23 @@ definitions:
         type: string
       parent_id:
         type: string
+      position:
+        type: number
       type:
         allOf:
         - $ref: '#/definitions/domain.NodeType'
         enum:
         - 1
         - 2
-      visibility:
-        $ref: '#/definitions/domain.NodeVisibility'
     required:
     - kb_id
     - name
     - type
     type: object
-  domain.CreateUserReq:
+  domain.EnterpriseAuth:
     properties:
-      account:
-        type: string
-      password:
-        minLength: 8
-        type: string
-    required:
-    - account
-    - password
-    type: object
-  domain.DeleteUserReq:
-    properties:
-      user_id:
-        type: string
-    required:
-    - user_id
+      enabled:
+        type: boolean
     type: object
   domain.EpubResp:
     properties:
@@ -604,7 +824,7 @@ definitions:
       feedback_content:
         type: string
       feedback_type:
-        $ref: '#/definitions/domain.FeedbackType'
+        type: string
       score:
         $ref: '#/definitions/domain.ScoreType'
     type: object
@@ -623,23 +843,11 @@ definitions:
         - $ref: '#/definitions/domain.ScoreType'
         description: -1 踩 ,0 1 赞成
       type:
-        allOf:
-        - $ref: '#/definitions/domain.FeedbackType'
-        description: 1 内容不准确，2 没有帮助，3 其他
+        description: 内容不准确，没有帮助，.......
+        type: string
     required:
-    - conversation_id
     - message_id
     type: object
-  domain.FeedbackType:
-    enum:
-    - 1
-    - 2
-    - 3
-    type: integer
-    x-enum-varnames:
-    - ContentErr
-    - NoHelp
-    - Other
   domain.FooterSettings:
     properties:
       brand_desc:
@@ -706,6 +914,28 @@ definitions:
       total:
         type: integer
     type: object
+  domain.GetProviderModelListReq:
+    properties:
+      api_header:
+        type: string
+      api_key:
+        type: string
+      base_url:
+        type: string
+      provider:
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/domain.ModelType'
+        enum:
+        - chat
+        - embedding
+        - rerank
+    required:
+    - base_url
+    - provider
+    - type
+    type: object
   domain.GetProviderModelListResp:
     properties:
       models:
@@ -765,6 +995,10 @@ definitions:
         type: string
       name:
         type: string
+      perm:
+        allOf:
+        - $ref: '#/definitions/consts.UserKBPermission'
+        description: 用户对知识库的权限
       updated_at:
         type: string
     type: object
@@ -788,21 +1022,6 @@ definitions:
       name:
         type: string
       url:
-        type: string
-    type: object
-  domain.LoginReq:
-    properties:
-      account:
-        type: string
-      password:
-        type: string
-    required:
-    - account
-    - password
-    type: object
-  domain.LoginResp:
-    properties:
-      token:
         type: string
     type: object
   domain.MessageFrom:
@@ -832,10 +1051,12 @@ definitions:
         type: string
       model:
         type: string
+      parameters:
+        $ref: '#/definitions/domain.ModelParam'
       prompt_tokens:
         type: integer
       provider:
-        $ref: '#/definitions/domain.ModelProvider'
+        $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider'
       total_tokens:
         type: integer
       type:
@@ -843,58 +1064,21 @@ definitions:
       updated_at:
         type: string
     type: object
-  domain.ModelListItem:
+  domain.ModelParam:
     properties:
-      api_header:
-        type: string
-      api_key:
-        type: string
-      api_version:
-        description: for azure openai
-        type: string
-      base_url:
-        type: string
-      completion_tokens:
+      context_window:
         type: integer
-      id:
-        type: string
-      model:
-        type: string
-      prompt_tokens:
+      max_tokens:
         type: integer
-      provider:
-        $ref: '#/definitions/domain.ModelProvider'
-      total_tokens:
-        type: integer
-      type:
-        $ref: '#/definitions/domain.ModelType'
+      r1_enabled:
+        type: boolean
+      support_computer_use:
+        type: boolean
+      support_images:
+        type: boolean
+      support_prompt_cache:
+        type: boolean
     type: object
-  domain.ModelProvider:
-    enum:
-    - OpenAI
-    - Ollama
-    - DeepSeek
-    - Moonshot
-    - SiliconFlow
-    - AzureOpenAI
-    - BaiZhiCloud
-    - Hunyuan
-    - BaiLian
-    - Volcengine
-    - Other
-    type: string
-    x-enum-varnames:
-    - ModelProviderBrandOpenAI
-    - ModelProviderBrandOllama
-    - ModelProviderBrandDeepSeek
-    - ModelProviderBrandMoonshot
-    - ModelProviderBrandSiliconFlow
-    - ModelProviderBrandAzureOpenAI
-    - ModelProviderBrandBaiZhiCloud
-    - ModelProviderBrandHunyuan
-    - ModelProviderBrandBaiLian
-    - ModelProviderBrandVolcengine
-    - ModelProviderBrandOther
   domain.ModelType:
     enum:
     - chat
@@ -923,8 +1107,6 @@ definitions:
       action:
         enum:
         - delete
-        - private
-        - public
         type: string
       ids:
         items:
@@ -937,34 +1119,34 @@ definitions:
     - ids
     - kb_id
     type: object
-  domain.NodeDetailResp:
+  domain.NodeGroupDetail:
     properties:
-      content:
-        type: string
-      created_at:
-        type: string
-      id:
-        type: string
+      auth_group_id:
+        type: integer
+      auth_ids:
+        items:
+          type: integer
+        type: array
       kb_id:
         type: string
-      meta:
-        $ref: '#/definitions/domain.NodeMeta'
       name:
         type: string
-      parent_id:
+      node_id:
         type: string
-      status:
-        $ref: '#/definitions/domain.NodeStatus'
-      type:
-        $ref: '#/definitions/domain.NodeType'
-      updated_at:
-        type: string
-      visibility:
-        $ref: '#/definitions/domain.NodeVisibility'
+      perm:
+        $ref: '#/definitions/consts.NodePermName'
     type: object
   domain.NodeListItemResp:
     properties:
       created_at:
+        type: string
+      creator:
+        type: string
+      creator_id:
+        type: string
+      editor:
+        type: string
+      editor_id:
         type: string
       emoji:
         type: string
@@ -974,6 +1156,8 @@ definitions:
         type: string
       parent_id:
         type: string
+      permissions:
+        $ref: '#/definitions/domain.NodePermissions'
       position:
         type: number
       status:
@@ -984,8 +1168,6 @@ definitions:
         $ref: '#/definitions/domain.NodeType'
       updated_at:
         type: string
-      visibility:
-        $ref: '#/definitions/domain.NodeVisibility'
     type: object
   domain.NodeMeta:
     properties:
@@ -994,10 +1176,26 @@ definitions:
       summary:
         type: string
     type: object
+  domain.NodePermissions:
+    properties:
+      answerable:
+        allOf:
+        - $ref: '#/definitions/consts.NodeAccessPerm'
+        description: 可被问答
+      visible:
+        allOf:
+        - $ref: '#/definitions/consts.NodeAccessPerm'
+        description: 导航内可见
+      visitable:
+        allOf:
+        - $ref: '#/definitions/consts.NodeAccessPerm'
+        description: 可被访问
+    type: object
   domain.NodeStatus:
     enum:
     - 1
     - 2
+    format: int32
     type: integer
     x-enum-varnames:
     - NodeStatusDraft
@@ -1018,18 +1216,11 @@ definitions:
     enum:
     - 1
     - 2
+    format: int32
     type: integer
     x-enum-varnames:
     - NodeTypeFolder
     - NodeTypeDocument
-  domain.NodeVisibility:
-    enum:
-    - 1
-    - 2
-    type: integer
-    x-enum-varnames:
-    - NodeVisibilityPrivate
-    - NodeVisibilityPublic
   domain.NotnionGetListReq:
     properties:
       cation_title:
@@ -1041,6 +1232,16 @@ definitions:
     properties:
       key:
         type: string
+    type: object
+  domain.PWResponse:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+      success:
+        type: boolean
     type: object
   domain.Page:
     properties:
@@ -1059,6 +1260,15 @@ definitions:
         type: string
       title:
         type: string
+    type: object
+  domain.PaginatedResult-array_domain_ConversationMessageListItem:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/domain.ConversationMessageListItem'
+        type: array
+      total:
+        type: integer
     type: object
   domain.ParseURLItem:
     properties:
@@ -1110,17 +1320,6 @@ definitions:
         type: string
       type:
         $ref: '#/definitions/domain.NodeType'
-    type: object
-  domain.ResetPasswordReq:
-    properties:
-      id:
-        type: string
-      new_password:
-        minLength: 8
-        type: string
-    required:
-    - id
-    - new_password
     type: object
   domain.Response:
     properties:
@@ -1198,6 +1397,60 @@ definitions:
       title:
         type: string
       url:
+        type: string
+    type: object
+  domain.ShareCommentListItem:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      info:
+        $ref: '#/definitions/domain.CommentInfo'
+      ip_address:
+        allOf:
+        - $ref: '#/definitions/domain.IPAddress'
+        description: ip地址
+      kb_id:
+        type: string
+      node_id:
+        type: string
+      parent_id:
+        type: string
+      root_id:
+        type: string
+    type: object
+  domain.ShareConversationDetailResp:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      messages:
+        items:
+          $ref: '#/definitions/domain.ShareConversationMessage'
+        type: array
+      subject:
+        type: string
+    type: object
+  domain.ShareConversationMessage:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      role:
+        $ref: '#/definitions/schema.RoleType'
+    type: object
+  domain.SiYuanResp:
+    properties:
+      content:
+        type: string
+      id:
+        type: integer
+      title:
         type: string
     type: object
   domain.SimpleAuth:
@@ -1291,21 +1544,10 @@ definitions:
         type: string
       model:
         type: string
+      param:
+        $ref: '#/definitions/domain.ModelParam'
       provider:
-        allOf:
-        - $ref: '#/definitions/domain.ModelProvider'
-        enum:
-        - OpenAI
-        - Ollama
-        - DeepSeek
-        - SiliconFlow
-        - Moonshot
-        - Other
-        - AzureOpenAI
-        - BaiZhiCloud
-        - Hunyuan
-        - BaiLian
-        - Volcengine
+        $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider'
       type:
         allOf:
         - $ref: '#/definitions/domain.ModelType'
@@ -1332,16 +1574,18 @@ definitions:
         type: string
       name:
         type: string
+      position:
+        type: number
       summary:
         type: string
-      visibility:
-        $ref: '#/definitions/domain.NodeVisibility'
     required:
     - id
     - kb_id
     type: object
   domain.UserInfo:
     properties:
+      auth_user_id:
+        type: integer
       avatar:
         description: avatar
         type: string
@@ -1356,24 +1600,18 @@ definitions:
       user_id:
         type: string
     type: object
-  domain.UserInfoResp:
+  domain.WebAppCommentSettings:
     properties:
-      account:
-        type: string
-      created_at:
-        type: string
-      id:
-        type: string
-      last_access:
-        type: string
+      is_enable:
+        type: boolean
+      moderation_enable:
+        type: boolean
     type: object
-  domain.UserListItemResp:
+  domain.WebAppCustomSettings:
     properties:
-      account:
-        type: string
-      id:
-        type: string
-      last_access:
+      allow_theme_switching:
+        type: boolean
+      header_search_placeholder:
         type: string
     type: object
   domain.WidgetBotSettings:
@@ -1396,15 +1634,82 @@ definitions:
       title:
         type: string
     type: object
-  handler_v1.ConversationListItems:
+  domain.YuqueResp:
     properties:
-      data:
-        items:
-          $ref: '#/definitions/domain.ConversationListItem'
-        type: array
-      total:
-        type: integer
+      content:
+        type: string
+      title:
+        type: string
     type: object
+  github_com_chaitin_panda-wiki_domain.CheckModelReq:
+    properties:
+      api_header:
+        type: string
+      api_key:
+        type: string
+      api_version:
+        description: for azure openai
+        type: string
+      base_url:
+        type: string
+      model:
+        type: string
+      provider:
+        $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider'
+      type:
+        allOf:
+        - $ref: '#/definitions/domain.ModelType'
+        enum:
+        - chat
+        - embedding
+        - rerank
+    required:
+    - base_url
+    - model
+    - provider
+    - type
+    type: object
+  github_com_chaitin_panda-wiki_domain.CheckModelResp:
+    properties:
+      content:
+        type: string
+      error:
+        type: string
+    type: object
+  github_com_chaitin_panda-wiki_domain.ModelListItem:
+    properties:
+      api_header:
+        type: string
+      api_key:
+        type: string
+      api_version:
+        description: for azure openai
+        type: string
+      base_url:
+        type: string
+      completion_tokens:
+        type: integer
+      id:
+        type: string
+      model:
+        type: string
+      parameters:
+        $ref: '#/definitions/domain.ModelParam'
+      prompt_tokens:
+        type: integer
+      provider:
+        $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.ModelProvider'
+      total_tokens:
+        type: integer
+      type:
+        $ref: '#/definitions/domain.ModelType'
+    type: object
+  github_com_chaitin_panda-wiki_domain.ModelProvider:
+    enum:
+    - BaiZhiCloud
+    type: string
+    x-enum-varnames:
+    - ModelProviderBrandBaiZhiCloud
   schema.RoleType:
     enum:
     - assistant
@@ -1417,8 +1722,259 @@ definitions:
     - User
     - System
     - Tool
+  share.ShareCommentLists:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/domain.ShareCommentListItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.AuthGetResp:
+    properties:
+      auth_type:
+        $ref: '#/definitions/consts.AuthType'
+      source_type:
+        $ref: '#/definitions/consts.SourceType'
+    type: object
+  v1.AuthLoginSimpleReq:
+    properties:
+      password:
+        type: string
+    required:
+    - password
+    type: object
+  v1.CommentLists:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/domain.CommentListItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.ConversationListItems:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/domain.ConversationListItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  v1.CreateUserReq:
+    properties:
+      account:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/consts.UserRole'
+        enum:
+        - admin
+        - user
+    required:
+    - account
+    - password
+    - role
+    type: object
+  v1.DeleteUserReq:
+    properties:
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  v1.KBUserInviteReq:
+    properties:
+      kb_id:
+        type: string
+      perm:
+        allOf:
+        - $ref: '#/definitions/consts.UserKBPermission'
+        enum:
+        - full_control
+        - doc_manage
+        - data_operate
+      user_id:
+        type: string
+    required:
+    - kb_id
+    - perm
+    - user_id
+    type: object
+  v1.KBUserListItemResp:
+    properties:
+      account:
+        type: string
+      id:
+        type: string
+      perms:
+        $ref: '#/definitions/consts.UserKBPermission'
+      role:
+        $ref: '#/definitions/consts.UserRole'
+    type: object
+  v1.KBUserUpdateReq:
+    properties:
+      kb_id:
+        type: string
+      perm:
+        allOf:
+        - $ref: '#/definitions/consts.UserKBPermission'
+        enum:
+        - full_control
+        - doc_manage
+        - data_operate
+      user_id:
+        type: string
+    required:
+    - kb_id
+    - perm
+    - user_id
+    type: object
+  v1.LoginReq:
+    properties:
+      account:
+        type: string
+      password:
+        type: string
+    required:
+    - account
+    - password
+    type: object
+  v1.LoginResp:
+    properties:
+      token:
+        type: string
+    type: object
+  v1.NodeDetailResp:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      kb_id:
+        type: string
+      meta:
+        $ref: '#/definitions/domain.NodeMeta'
+      name:
+        type: string
+      parent_id:
+        type: string
+      permissions:
+        $ref: '#/definitions/domain.NodePermissions'
+      status:
+        $ref: '#/definitions/domain.NodeStatus'
+      type:
+        $ref: '#/definitions/domain.NodeType'
+      updated_at:
+        type: string
+    type: object
+  v1.NodePermissionEditReq:
+    properties:
+      answerable_groups:
+        description: 可被问答
+        items:
+          type: integer
+        type: array
+      id:
+        type: string
+      kb_id:
+        type: string
+      permissions:
+        $ref: '#/definitions/domain.NodePermissions'
+      visible_groups:
+        description: 导航内可见
+        items:
+          type: integer
+        type: array
+      visitable_groups:
+        description: 可被访问
+        items:
+          type: integer
+        type: array
+    required:
+    - id
+    - kb_id
+    type: object
+  v1.NodePermissionEditResp:
+    type: object
+  v1.NodePermissionResp:
+    properties:
+      answerable_groups:
+        description: 可被问答
+        items:
+          $ref: '#/definitions/domain.NodeGroupDetail'
+        type: array
+      id:
+        type: string
+      permissions:
+        $ref: '#/definitions/domain.NodePermissions'
+      visible_groups:
+        description: 导航内可见
+        items:
+          $ref: '#/definitions/domain.NodeGroupDetail'
+        type: array
+      visitable_groups:
+        description: 可被访问
+        items:
+          $ref: '#/definitions/domain.NodeGroupDetail'
+        type: array
+    type: object
+  v1.ResetPasswordReq:
+    properties:
+      id:
+        type: string
+      new_password:
+        minLength: 8
+        type: string
+    required:
+    - id
+    - new_password
+    type: object
+  v1.UserInfoResp:
+    properties:
+      account:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      last_access:
+        type: string
+      role:
+        $ref: '#/definitions/consts.UserRole'
+    type: object
+  v1.UserListItemResp:
+    properties:
+      account:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      last_access:
+        type: string
+      role:
+        $ref: '#/definitions/consts.UserRole'
+    type: object
+  v1.UserListResp:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/v1.UserListItemResp'
+        type: array
+    type: object
 info:
   contact: {}
+  description: panda-wiki API documentation
+  title: panda-wiki API
+  version: "1.0"
 paths:
   /api/v1/app:
     delete:
@@ -1436,6 +1992,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
       summary: Delete app
       tags:
       - app
@@ -1444,6 +2002,11 @@ paths:
       - application/json
       description: Update app
       parameters:
+      - description: id
+        in: query
+        name: id
+        required: true
+        type: string
       - description: app
         in: body
         name: app
@@ -1457,6 +2020,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
       summary: Update app
       tags:
       - app
@@ -1483,14 +2048,85 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.AppDetailResp'
               type: object
+      security:
+      - bearerAuth: []
       summary: Get app detail
       tags:
       - app
+  /api/v1/comment:
+    get:
+      consumes:
+      - application/json
+      description: GetCommentModeratedList
+      parameters:
+      - in: query
+        name: kb_id
+        required: true
+        type: string
+      - in: query
+        minimum: 1
+        name: page
+        required: true
+        type: integer
+      - in: query
+        minimum: 1
+        name: per_page
+        required: true
+        type: integer
+      - enum:
+        - -1
+        - 0
+        - 1
+        format: int32
+        in: query
+        name: status
+        type: integer
+        x-enum-varnames:
+        - CommentStatusReject
+        - CommentStatusPending
+        - CommentStatusAccepted
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: conversationList
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.CommentLists'
+              type: object
+      summary: GetCommentModeratedList
+      tags:
+      - comment
+  /api/v1/comment/list:
+    delete:
+      consumes:
+      - application/json
+      description: DeleteCommentList
+      parameters:
+      - collectionFormat: csv
+        in: query
+        items:
+          type: string
+        name: ids
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: total
+          schema:
+            $ref: '#/definitions/domain.Response'
+      summary: DeleteCommentList
+      tags:
+      - comment
   /api/v1/conversation:
     get:
       consumes:
@@ -1527,10 +2163,10 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/handler_v1.ConversationListItems'
+                  $ref: '#/definitions/v1.ConversationListItems'
               type: object
       summary: get conversation list
       tags:
@@ -1541,14 +2177,12 @@ paths:
       - application/json
       description: get conversation detail
       parameters:
-      - description: user id
-        in: header
-        name: X-SafePoint-User-ID
+      - in: query
+        name: id
         required: true
         type: string
-      - description: conversation id
-        in: query
-        name: id
+      - in: query
+        name: kb_id
         required: true
         type: string
       produces:
@@ -1558,7 +2192,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.ConversationDetailResp'
@@ -1566,6 +2200,70 @@ paths:
       summary: get conversation detail
       tags:
       - conversation
+  /api/v1/conversation/message/detail:
+    get:
+      consumes:
+      - application/json
+      description: Get message detail
+      parameters:
+      - in: query
+        name: id
+        required: true
+        type: string
+      - in: query
+        name: kb_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ConversationMessage'
+              type: object
+      summary: Get message detail
+      tags:
+      - Message
+  /api/v1/conversation/message/list:
+    get:
+      consumes:
+      - application/json
+      description: GetMessageFeedBackList
+      parameters:
+      - in: query
+        name: kb_id
+        required: true
+        type: string
+      - in: query
+        minimum: 1
+        name: page
+        required: true
+        type: integer
+      - in: query
+        minimum: 1
+        name: per_page
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: MessageList
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.PaginatedResult-array_domain_ConversationMessageListItem'
+              type: object
+      summary: GetMessageFeedBackList
+      tags:
+      - Message
   /api/v1/crawler/confluence/analysis_export_file:
     post:
       consumes:
@@ -1589,7 +2287,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -1622,7 +2320,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.EpubResp'
@@ -1649,7 +2347,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -1678,7 +2376,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -1707,7 +2405,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -1736,7 +2434,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -1765,7 +2463,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -1794,7 +2492,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -1823,7 +2521,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.ParseURLResp'
@@ -1850,7 +2548,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.ParseURLResp'
@@ -1877,12 +2575,45 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.ScrapeResp'
               type: object
       summary: Scrape
+      tags:
+      - crawler
+  /api/v1/crawler/siyuan/analysis_export_file:
+    post:
+      consumes:
+      - application/json
+      description: Analyze SiYuan Export File
+      parameters:
+      - description: file
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: kb_id
+        in: formData
+        name: kb_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.SiYuanResp'
+                  type: array
+              type: object
+      summary: AnalysisSiyuanExportFile
       tags:
       - crawler
   /api/v1/crawler/wikijs/analysis_export_file:
@@ -1908,7 +2639,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -1916,6 +2647,39 @@ paths:
                   type: array
               type: object
       summary: AnalysisWikijsExportFile
+      tags:
+      - crawler
+  /api/v1/crawler/yuque/analysis_export_file:
+    post:
+      consumes:
+      - application/json
+      description: Analyze Yuque Export File
+      parameters:
+      - description: file
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: kb_id
+        in: formData
+        name: kb_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.YuqueResp'
+                  type: array
+              type: object
+      summary: AnalysisYuqueExportFile
       tags:
       - crawler
   /api/v1/creation/text:
@@ -2023,11 +2787,13 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.KnowledgeBaseDetail'
               type: object
+      security:
+      - bearerAuth: []
       summary: GetKnowledgeBaseDetail
       tags:
       - knowledge_base
@@ -2064,7 +2830,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
@@ -2114,12 +2880,116 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.GetKBReleaseListResp'
               type: object
       summary: GetKBReleaseList
+      tags:
+      - knowledge_base
+  /api/v1/knowledge_base/user/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Remove user from knowledge base
+      parameters:
+      - in: query
+        name: kb_id
+        required: true
+        type: string
+      - in: query
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
+      summary: KBUserDelete
+      tags:
+      - knowledge_base
+  /api/v1/knowledge_base/user/invite:
+    post:
+      consumes:
+      - application/json
+      description: Invite user to knowledge base
+      parameters:
+      - description: Invite User Request
+        in: body
+        name: param
+        required: true
+        schema:
+          $ref: '#/definitions/v1.KBUserInviteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
+      summary: KBUserInvite
+      tags:
+      - knowledge_base
+  /api/v1/knowledge_base/user/list:
+    get:
+      consumes:
+      - application/json
+      description: KBUserList
+      parameters:
+      - description: Knowledge Base ID
+        in: query
+        name: kb_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/v1.KBUserListItemResp'
+                  type: array
+              type: object
+      security:
+      - bearerAuth: []
+      summary: KBUserList
+      tags:
+      - knowledge_base
+  /api/v1/knowledge_base/user/update:
+    patch:
+      consumes:
+      - application/json
+      description: Update user permission in knowledge base
+      parameters:
+      - description: Update User Permission Request
+        in: body
+        name: param
+        required: true
+        schema:
+          $ref: '#/definitions/v1.KBUserUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
+      summary: KBUserUpdate
       tags:
       - knowledge_base
   /api/v1/model:
@@ -2175,7 +3045,7 @@ paths:
         name: model
         required: true
         schema:
-          $ref: '#/definitions/domain.CheckModelReq'
+          $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.CheckModelReq'
       produces:
       - application/json
       responses:
@@ -2186,7 +3056,7 @@ paths:
             - $ref: '#/definitions/domain.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/domain.CheckModelResp'
+                  $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.CheckModelResp'
               type: object
       summary: check model
       tags:
@@ -2229,57 +3099,26 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/domain.ModelListItem'
+                  $ref: '#/definitions/github_com_chaitin_panda-wiki_domain.ModelListItem'
               type: object
       summary: get model list
       tags:
       - model
   /api/v1/model/provider/supported:
-    get:
+    post:
       consumes:
       - application/json
       description: get provider supported model list
       parameters:
-      - in: query
-        name: api_header
-        type: string
-      - in: query
-        name: api_key
-        type: string
-      - in: query
-        name: base_url
+      - description: get supported model list request
+        in: body
+        name: params
         required: true
-        type: string
-      - enum:
-        - SiliconFlow
-        - OpenAI
-        - Ollama
-        - DeepSeek
-        - Moonshot
-        - AzureOpenAI
-        - BaiZhiCloud
-        - Hunyuan
-        - BaiLian
-        - Volcengine
-        in: query
-        name: provider
-        required: true
-        type: string
-      - enum:
-        - chat
-        - embedding
-        - rerank
-        in: query
-        name: type
-        required: true
-        type: string
-        x-enum-varnames:
-        - ModelTypeChat
-        - ModelTypeEmbedding
-        - ModelTypeRerank
+        schema:
+          $ref: '#/definitions/domain.GetProviderModelListReq'
       produces:
       - application/json
       responses:
@@ -2287,7 +3126,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   $ref: '#/definitions/domain.GetProviderModelListResp'
@@ -2314,13 +3153,15 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   additionalProperties:
                     type: string
                   type: object
               type: object
+      security:
+      - bearerAuth: []
       summary: Create Node
       tags:
       - node
@@ -2343,13 +3184,15 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   additionalProperties:
                     type: string
                   type: object
               type: object
+      security:
+      - bearerAuth: []
       summary: Node Action
       tags:
       - node
@@ -2372,6 +3215,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
       summary: Batch Move Node
       tags:
       - node
@@ -2381,9 +3226,15 @@ paths:
       - application/json
       description: Get Node Detail
       parameters:
-      - description: ID
-        in: query
+      - in: query
+        name: format
+        type: string
+      - in: query
         name: id
+        required: true
+        type: string
+      - in: query
+        name: kb_id
         required: true
         type: string
       produces:
@@ -2393,11 +3244,13 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/domain.NodeDetailResp'
+                  $ref: '#/definitions/v1.NodeDetailResp'
               type: object
+      security:
+      - bearerAuth: []
       summary: Get Node Detail
       tags:
       - node
@@ -2419,6 +3272,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
       summary: Update Node Detail
       tags:
       - node
@@ -2442,13 +3297,15 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
                     $ref: '#/definitions/domain.NodeListItemResp'
                   type: array
               type: object
+      security:
+      - bearerAuth: []
       summary: Get Node List
       tags:
       - node
@@ -2471,9 +3328,73 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
       summary: Move Node
       tags:
       - node
+  /api/v1/node/permission:
+    get:
+      consumes:
+      - application/json
+      description: 文档授权信息获取
+      operationId: v1-NodePermission
+      parameters:
+      - in: query
+        name: id
+        required: true
+        type: string
+      - in: query
+        name: kb_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.NodePermissionResp'
+              type: object
+      security:
+      - bearerAuth: []
+      summary: 文档授权信息获取
+      tags:
+      - NodePermission
+  /api/v1/node/permission/edit:
+    patch:
+      consumes:
+      - application/json
+      description: 文档授权信息更新
+      operationId: v1-NodePermissionEdit
+      parameters:
+      - description: para
+        in: body
+        name: param
+        required: true
+        schema:
+          $ref: '#/definitions/v1.NodePermissionEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.NodePermissionEditResp'
+              type: object
+      security:
+      - bearerAuth: []
+      summary: 文档授权信息更新
+      tags:
+      - NodePermission
   /api/v1/node/recommend_nodes:
     get:
       consumes:
@@ -2498,13 +3419,15 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
                   items:
                     $ref: '#/definitions/domain.RecommendNodeListResp'
                   type: array
               type: object
+      security:
+      - bearerAuth: []
       summary: Recommend Nodes
       tags:
       - node
@@ -2527,6 +3450,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.Response'
+      security:
+      - bearerAuth: []
       summary: Summary Node
       tags:
       - node
@@ -2707,7 +3632,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.UserInfoResp'
+            $ref: '#/definitions/v1.UserInfoResp'
       summary: GetUser
       tags:
       - user
@@ -2722,7 +3647,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.CreateUserReq'
+          $ref: '#/definitions/v1.CreateUserReq'
       produces:
       - application/json
       responses:
@@ -2744,7 +3669,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.DeleteUserReq'
+          $ref: '#/definitions/v1.DeleteUserReq'
       produces:
       - application/json
       responses:
@@ -2767,12 +3692,10 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/domain.Response'
+            - $ref: '#/definitions/domain.PWResponse'
             - properties:
                 data:
-                  items:
-                    $ref: '#/definitions/domain.UserListItemResp'
-                  type: array
+                  $ref: '#/definitions/v1.UserListResp'
               type: object
       summary: ListUsers
       tags:
@@ -2788,14 +3711,14 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.LoginReq'
+          $ref: '#/definitions/v1.LoginReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.LoginResp'
+            $ref: '#/definitions/v1.LoginResp'
       summary: Login
       tags:
       - user
@@ -2810,7 +3733,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.ResetPasswordReq'
+          $ref: '#/definitions/v1.ResetPasswordReq'
       produces:
       - application/json
       responses:
@@ -2842,6 +3765,27 @@ paths:
       summary: GetAppInfo
       tags:
       - share_app
+  /share/v1/app/wechat/service/answer:
+    get:
+      consumes:
+      - application/json
+      description: GetWechatAnswer
+      parameters:
+      - description: conversation id
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+      summary: GetWechatAnswer
+      tags:
+      - Wechat
   /share/v1/app/widget/info:
     get:
       consumes:
@@ -2863,6 +3807,61 @@ paths:
       summary: GetWidgetAppInfo
       tags:
       - share_app
+  /share/v1/auth/get:
+    get:
+      consumes:
+      - application/json
+      description: AuthGet
+      operationId: v1-AuthGet
+      parameters:
+      - description: kb_id
+        in: header
+        name: X-KB-ID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/v1.AuthGetResp'
+              type: object
+      summary: AuthGet
+      tags:
+      - share_auth
+  /share/v1/auth/login/simple:
+    post:
+      consumes:
+      - application/json
+      description: AuthLoginSimple
+      operationId: v1-AuthLoginSimple
+      parameters:
+      - description: kb_id
+        in: header
+        name: X-KB-ID
+        required: true
+        type: string
+      - description: para
+        in: body
+        name: param
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AuthLoginSimpleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+      summary: AuthLoginSimple
+      tags:
+      - share_auth
   /share/v1/chat/feedback:
     post:
       consumes:
@@ -2939,6 +3938,90 @@ paths:
       summary: ChatWidget
       tags:
       - share_chat
+  /share/v1/comment:
+    post:
+      consumes:
+      - application/json
+      description: CreateComment
+      parameters:
+      - description: Comment
+        in: body
+        name: comment
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CommentReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: CommentID
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  type: string
+              type: object
+      summary: CreateComment
+      tags:
+      - share_comment
+  /share/v1/comment/list:
+    get:
+      consumes:
+      - application/json
+      description: GetCommentList
+      parameters:
+      - description: nodeID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: CommentList
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/share.ShareCommentLists'
+              type: object
+      summary: GetCommentList
+      tags:
+      - share_comment
+  /share/v1/conversation/detail:
+    get:
+      consumes:
+      - application/json
+      description: GetConversationDetail
+      parameters:
+      - description: kb id
+        in: header
+        name: X-KB-ID
+        required: true
+        type: string
+      - description: conversation id
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.PWResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ShareConversationDetailResp'
+              type: object
+      summary: GetConversationDetail
+      tags:
+      - share_conversation
   /share/v1/node/detail:
     get:
       consumes:
@@ -2953,6 +4036,11 @@ paths:
       - description: node id
         in: query
         name: id
+        required: true
+        type: string
+      - description: format
+        in: query
+        name: format
         required: true
         type: string
       produces:
@@ -3008,4 +4096,10 @@ paths:
       summary: RecordPage
       tags:
       - share_stat
+securityDefinitions:
+  bearerAuth:
+    description: Type "Bearer" + a space + your token to authorize
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

@@ -1,30 +1,30 @@
-'use client'
+'use client';
 
-import { Heading } from "@/assets/type";
 import { IconArrowDown } from "@/components/icons";
 import useScroll from "@/utils/useScroll";
 import { Box, IconButton, Stack } from "@mui/material";
+import { TocItem, TocList } from "@yu-cq/tiptap";
 import { useState } from "react";
 
 interface DocAnchorProps {
   summary: string
   footerHeight: number
-  headings: Heading[]
+  headings: TocList
 }
 
 const HeadingSx = [
   { fontWeight: 400, color: 'text.secondary' },
   { fontWeight: 400, color: 'text.tertiary' },
   { fontWeight: 400, color: 'text.disabled' },
-]
+];
 
 const DocAnchor = ({ summary, headings, footerHeight }: DocAnchorProps) => {
-  const { activeHeading, scrollToElement } = useScroll(headings)
-  const [expand, setExpand] = useState(true)
+  const { activeHeading, scrollToElement } = useScroll(headings);
+  const [expand, setExpand] = useState(true);
 
-  const levels = Array.from(new Set(headings.map(it => it.heading).sort((a, b) => a - b))).slice(0, 3)
+  const levels = Array.from(new Set(headings.map(it => it.level).sort((a, b) => a - b))).slice(0, 3)
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>, heading: Heading) => {
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>, heading: TocItem) => {
     e.preventDefault();
     if (scrollToElement) {
       scrollToElement(heading.id, 80);
@@ -37,11 +37,10 @@ const DocAnchor = ({ summary, headings, footerHeight }: DocAnchorProps) => {
 
         window.scrollTo({
           top: offsetPosition,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
-        // 使用 setTimeout 来避免在事件处理过程中同步修改 location
         setTimeout(() => {
-          location.hash = encodeURIComponent(heading.title);
+          location.hash = encodeURIComponent(heading.textContent);
         }, 0);
       }
     }
@@ -56,7 +55,7 @@ const DocAnchor = ({ summary, headings, footerHeight }: DocAnchorProps) => {
     width: 200,
   }}>
     {summary && <Box sx={{
-      bgcolor: 'background.paper',
+      bgcolor: 'background.paper2',
       borderRadius: '10px',
       border: '1px solid',
       borderColor: 'divider',
@@ -91,7 +90,7 @@ const DocAnchor = ({ summary, headings, footerHeight }: DocAnchorProps) => {
       }}>{summary}</Box>}
     </Box>}
     {headings.length > 0 && <Box sx={{
-      bgcolor: 'background.paper',
+      bgcolor: 'background.paper2',
       borderRadius: '10px',
       border: '1px solid',
       borderColor: 'divider',
@@ -116,8 +115,8 @@ const DocAnchor = ({ summary, headings, footerHeight }: DocAnchorProps) => {
         msOverflowStyle: 'none',
         scrollbarWidth: 'none',
       }}>
-        {headings.filter(it => levels.includes(it.heading)).map((heading) => {
-          const idx = levels.indexOf(heading.heading)
+        {headings.filter(it => levels.includes(it.level)).map((heading) => {
+          const idx = levels.indexOf(heading.level)
           return <Box key={heading.id} sx={{
             cursor: 'pointer',
             pl: idx * 2,
@@ -130,12 +129,12 @@ const DocAnchor = ({ summary, headings, footerHeight }: DocAnchorProps) => {
               color: 'primary.main'
             }
           }} onClick={(e) => handleClick(e, heading)}>
-            {heading.title}
+            {heading.textContent}
           </Box>
         })}
       </Box>
     </Box>}
   </Box>
-}
+};
 
 export default DocAnchor;

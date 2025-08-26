@@ -16,8 +16,8 @@ type ConversationRepository struct {
 	logger *log.Logger
 }
 
-func NewConversationRepository(db *pg.DB) *ConversationRepository {
-	return &ConversationRepository{db: db}
+func NewConversationRepository(db *pg.DB, logger *log.Logger) *ConversationRepository {
+	return &ConversationRepository{db: db, logger: logger.WithModule("repo.pg.conversation")}
 }
 
 func (r *ConversationRepository) CreateConversationMessage(ctx context.Context, conversationMessage *domain.ConversationMessage, references []*domain.ConversationReference) error {
@@ -67,11 +67,15 @@ func (r *ConversationRepository) GetConversationList(ctx context.Context, reques
 	return conversations, uint64(count), nil
 }
 
-func (r *ConversationRepository) GetConversationDetail(ctx context.Context, conversationID string) (*domain.ConversationDetailResp, error) {
+func (r *ConversationRepository) GetConversationDetail(ctx context.Context, kbID, conversationID string) (*domain.ConversationDetailResp, error) {
 	conversation := &domain.ConversationDetailResp{}
-	if err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Model(&domain.Conversation{}).
-		Where("id = ?", conversationID).
+		Where("id = ?", conversationID)
+	if kbID != "" {
+		query = query.Where("kb_id = ?", kbID)
+	}
+	if err := query.
 		First(conversation).Error; err != nil {
 		return nil, err
 	}
@@ -139,12 +143,23 @@ func (r *ConversationRepository) GetConversationCount(ctx context.Context, kbID 
 	return count, nil
 }
 
-func (r *ConversationRepository) GetConversationMessagesDetailByID(ctx context.Context, conversationId string, messageId string) (*domain.ConversationMessage, error) {
+func (r *ConversationRepository) GetConversationMessagesDetailByID(ctx context.Context, messageId string) (*domain.ConversationMessage, error) {
 	message := &domain.ConversationMessage{}
 	if err := r.db.WithContext(ctx).
 		Model(&domain.ConversationMessage{}).
-		Where("conversation_id = ?", conversationId).
 		Where("id = ?", messageId).
+		First(&message).Error; err != nil {
+		return nil, err
+	}
+	return message, nil
+}
+
+func (r *ConversationRepository) GetConversationMessagesDetailByKbID(ctx context.Context, kbId, messageId string) (*domain.ConversationMessage, error) {
+	message := &domain.ConversationMessage{}
+	if err := r.db.WithContext(ctx).
+		Model(&domain.ConversationMessage{}).
+		Where("id = ?", messageId).
+		Where("kb_id = ?", kbId).
 		First(&message).Error; err != nil {
 		return nil, err
 	}
@@ -163,7 +178,6 @@ func (r *ConversationRepository) UpdateMessageFeedback(ctx context.Context, feed
 	// 更新消息的反馈信息
 	if err := r.db.WithContext(ctx).Model(&domain.ConversationMessage{}).
 		Where("id = ?", feedback.MessageId).
-		Where("conversation_id = ?", feedback.ConversationId).
 		Update("info", feedbackInfo).Error; err != nil {
 		return err
 	}
@@ -190,4 +204,41 @@ func (r *ConversationRepository) GetConversationFeedBackInfoByIDs(ctx context.Co
 		result[message.ConversationID] = &message.Info
 	}
 	return result, nil
+}
+
+func (r *ConversationRepository) GetMessageFeedBackList(ctx context.Context, req *domain.MessageListReq) (int64, []*domain.ConversationMessageListItem, error) {
+	// get feedback info -> user must feedback
+	query := r.db.WithContext(ctx).Table("conversation_messages as cm").
+		Joins("JOIN conversations ON conversations.id = cm.conversation_id").
+		Where("conversations.kb_id = ?", req.KBID).
+		Where("cm.info is not null AND cm.info->>'score' != ?", "0").
+		Where("role = ?", schema.Assistant)
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return 0, nil, err
+	}
+	r.logger.Debug("GetMessageFeedBackList count", log.Int64("count", count))
+
+	query = r.db.WithContext(ctx).Table("conversation_messages as cm").
+		Joins("LEFT JOIN LATERAL (SELECT content FROM conversation_messages WHERE conversation_id = cm.conversation_id AND role = 'user' AND created_at < cm.created_at ORDER BY created_at DESC LIMIT 1) u ON true").
+		Joins("JOIN conversations ON conversations.id = cm.conversation_id").
+		Joins("JOIN apps ON cm.app_id = apps.id").
+		Where("conversations.kb_id = ?", req.KBID).
+		Where("cm.info is not null AND cm.info->>'score' != ?", "0").
+		Where("role = ?", schema.Assistant)
+
+	var messageAnswers []*domain.ConversationMessageListItem
+
+	if err := query.
+		Select("cm.id", "cm.app_id", "apps.type as app_type", "u.content as question", "cm.content as answer", "conversations.info as conversation_info", "cm.app_id", "cm.conversation_id", "cm.remote_ip", "cm.info", "cm.created_at").
+		Offset(req.Offset()).Limit(req.Limit()).Order("created_at DESC").
+		Find(&messageAnswers).Error; err != nil {
+		return 0, nil, err
+	}
+
+	if len(messageAnswers) == 0 {
+		return 0, nil, nil
+	}
+	return count, messageAnswers, nil
 }

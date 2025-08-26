@@ -8,7 +8,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
+	v1 "github.com/chaitin/panda-wiki/api/user/v1"
 	"github.com/chaitin/panda-wiki/config"
+	"github.com/chaitin/panda-wiki/consts"
 	"github.com/chaitin/panda-wiki/domain"
 	"github.com/chaitin/panda-wiki/log"
 	"github.com/chaitin/panda-wiki/repo/pg"
@@ -26,6 +28,7 @@ func NewUserUsecase(repo *pg.UserRepository, logger *log.Logger, config *config.
 			ID:       uuid.New().String(),
 			Account:  "admin",
 			Password: config.AdminPassword,
+			Role:     consts.UserRoleAdmin,
 		}); err != nil {
 			return nil, fmt.Errorf("failed to create default user: %w", err)
 		}
@@ -41,7 +44,7 @@ func (u *UserUsecase) CreateUser(ctx context.Context, user *domain.User) error {
 	return u.repo.CreateUser(ctx, user)
 }
 
-func (u *UserUsecase) VerifyUserAndGenerateToken(ctx context.Context, req domain.LoginReq) (string, error) {
+func (u *UserUsecase) VerifyUserAndGenerateToken(ctx context.Context, req v1.LoginReq) (string, error) {
 	var user *domain.User
 	var err error
 	user, err = u.repo.VerifyUser(ctx, req.Account, req.Password)
@@ -56,23 +59,20 @@ func (u *UserUsecase) VerifyUserAndGenerateToken(ctx context.Context, req domain
 	return token.SignedString([]byte(u.config.Auth.JWT.Secret))
 }
 
-func (u *UserUsecase) GetUser(ctx context.Context, userID string) (*domain.UserInfoResp, error) {
-	user, err := u.repo.GetUser(ctx, userID)
+func (u *UserUsecase) GetUser(ctx context.Context, userID string) (*domain.User, error) {
+	return u.repo.GetUser(ctx, userID)
+}
+
+func (u *UserUsecase) ListUsers(ctx context.Context) (*v1.UserListResp, error) {
+	// 获取所有用户列表
+	users, err := u.repo.ListUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &domain.UserInfoResp{
-		ID:        user.ID,
-		Account:   user.Account,
-		CreatedAt: user.CreatedAt,
-	}, nil
+	return &v1.UserListResp{Users: users}, nil
 }
 
-func (u *UserUsecase) ListUsers(ctx context.Context) ([]*domain.UserListItemResp, error) {
-	return u.repo.ListUsers(ctx)
-}
-
-func (u *UserUsecase) ResetPassword(ctx context.Context, req *domain.ResetPasswordReq) error {
+func (u *UserUsecase) ResetPassword(ctx context.Context, req *v1.ResetPasswordReq) error {
 	return u.repo.UpdateUserPassword(ctx, req.ID, req.NewPassword)
 }
 

@@ -13,6 +13,7 @@ type Chunk struct {
 	Content           string   `json:"content"`            // 分块内容
 	DocumentID        string   `json:"document_id"`        // 所属文档ID
 	DatasetID         string   `json:"dataset_id"`         // 所属数据集ID
+	GroupIDs          []int    `json:"group_ids"`          // 权限组
 	ImportantKeywords []string `json:"important_keywords"` // 关键词
 	Questions         []string `json:"questions"`          // 相关问题
 	Available         bool     `json:"available"`          // 是否可用
@@ -215,6 +216,7 @@ type Document struct {
 	Name            string      `json:"name"`          // 文档名
 	Location        string      `json:"location"`      // 存储位置
 	DatasetID       string      `json:"dataset_id"`    // 所属数据集ID
+	GroupIDs        []int       `json:"group_ids"`     // 权限组
 	CreatedBy       string      `json:"created_by"`    // 创建人
 	ChunkMethod     string      `json:"chunk_method"`  // 分块方式
 	ParserConfig    interface{} `json:"parser_config"` // 解析配置
@@ -277,6 +279,7 @@ type RetrievalRequest struct {
 	Question               string   `json:"question"`                           // 查询问题
 	DatasetIDs             []string `json:"dataset_ids,omitempty"`              // 数据集ID列表
 	DocumentIDs            []string `json:"document_ids,omitempty"`             // 文档ID列表
+	UserGroupIDs           []int    `json:"user_group_ids,omitempty"`           // 用户权限组
 	Page                   int      `json:"page,omitempty"`                     // 页码
 	PageSize               int      `json:"page_size,omitempty"`                // 每页数量
 	SimilarityThreshold    float64  `json:"similarity_threshold,omitempty"`     // 相似度阈值
