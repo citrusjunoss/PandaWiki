@@ -1,10 +1,9 @@
 import { DomainKnowledgeBaseDetail } from '@/request/types';
-import { getApiProV1Prompt, postApiProV1Prompt } from '@/request/pro/Prompt';
+// Pro feature removed - prompts not available in open source version
 import { Box, Slider, TextField } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { SettingCard, SettingCardItem, FormItem } from './Common';
 import { Controller, useForm } from 'react-hook-form';
-import { useAppSelector } from '@/store';
 import { Message } from 'ct-mui';
 
 interface CardAIProps {
@@ -13,7 +12,6 @@ interface CardAIProps {
 
 const CardAI = ({ kb }: CardAIProps) => {
   const [isEdit, setIsEdit] = useState(false);
-  const { license } = useAppSelector(state => state.config);
 
   const { control, handleSubmit, setValue } = useForm({
     defaultValues: {
@@ -22,26 +20,13 @@ const CardAI = ({ kb }: CardAIProps) => {
     },
   });
 
-  const onSubmit = handleSubmit(async data => {
-    await postApiProV1Prompt({
-      kb_id: kb.id!,
-      content: data.content,
-    });
-
-    Message.success('保存成功');
+  const onSubmit = handleSubmit(async (data: any) => {
+    // Pro feature not available in open source version
+    Message.info('此功能在开源版本中不可用');
     setIsEdit(false);
   });
 
-  const isPro = useMemo(() => {
-    return license.edition === 1 || license.edition === 2;
-  }, [license]);
-
-  useEffect(() => {
-    if (!kb.id || !isPro) return;
-    getApiProV1Prompt({ kb_id: kb.id! }).then(res => {
-      setValue('content', res.content || '');
-    });
-  }, [kb, isPro]);
+  const isPro = false; // Open source version
 
   return (
     <SettingCard title='AI 设置'>

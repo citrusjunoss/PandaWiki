@@ -9,9 +9,8 @@ import { ThemeProvider } from 'ct-mui';
 import { useEffect } from 'react';
 import { useLocation, useRoutes } from 'react-router-dom';
 import { getApiV1User } from './request/User';
-import { getApiV1License } from './request/pro/License';
 import KBCreate from './components/KB/KBCreate';
-import { setLicense, setUser } from './store/slices/config';
+import { setUser } from './store/slices/config';
 
 import '@yu-cq/tiptap/dist/index.css';
 
@@ -35,13 +34,6 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  useEffect(() => {
-    if (token) {
-      getApiV1License().then(res => {
-        dispatch(setLicense(res));
-      });
-    }
-  }, [token]);
 
   if (!token && !onlyAllowShareApi) {
     window.location.href = '/login';
