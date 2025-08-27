@@ -21,8 +21,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
-          submodules: true
-          token: ${{ secrets.PRO_TOKEN }}
 
       - name: Get version
         id: get_version
@@ -57,7 +55,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./backend
-          file: ./backend/Dockerfile.${{ matrix.service }}.pro
+          file: ./backend/Dockerfile.${{ matrix.service }}
           push: ${{ startsWith(github.ref, 'refs/tags/') }}
           platforms: linux/amd64, linux/arm64
           tags: crpi-om4xfxfotlzu97hi.cn-shenzhen.personal.cr.aliyuncs.com/c3c/panda-wiki-${{ matrix.service }}:${{ steps.get_version.outputs.VERSION }}
